@@ -109,8 +109,8 @@ def contract_edge(g, e):
 
 	assert e.connection[v1] == 'T' and e.connection[v2] == 'H'
 
-	ovl_pt = e.ovl_start[v1]
-	secondary_ovl_pt = e.ovl_end[v2]
+	v1_ovl_start = e.ovl_start[v1]
+	v2_ovl_end = e.ovl_end[v2]
 	orientation = e.v2_orientation
 
 	# remove vertices and edge
@@ -122,23 +122,23 @@ def contract_edge(g, e):
 	new_id = g.vertex_id_generator.get_id()
 
 	if orientation == 0:
-		assert v1.seq[ovl_pt:] == v2.seq[0:secondary_ovl_pt+1]
-		new_seq = v1.seq[0:ovl_pt] + v2.seq
-		# if not are_complements(v1.seq[ovl_pt:], v2.seq[0:secondary_ovl_pt+1]):
-		# 	new_seq = v1.seq[0:ovl_pt] + v2.seq
+		assert v1.seq[v1_ovl_start:] == v2.seq[0:v2_ovl_end+1]
+		new_seq = v1.seq[0:v1_ovl_start] + v2.seq
+		# if not are_complements(v1.seq[v1_ovl_start:], v2.seq[0:v2_ovl_end+1]):
+		# 	new_seq = v1.seq[0:v1_ovl_start] + v2.seq
 		# else:
-		# 	new_seq = v1.seq[0:ovl_pt] + reverse_complement(v2.seq)
+		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_complement(v2.seq)
 	elif orientation == 1:
-		assert v1.seq[ovl_pt:] == reverse_complement(v2.seq[0:secondary_ovl_pt+1])
-		new_seq = v1.seq[0:ovl_pt] + reverse_complement(v2.seq)
-		# if not are_complements(v1.seq[ovl_pt:], reverse_string(v2.seq[0:secondary_ovl_pt+1])):
-		# 	new_seq = v1.seq[0:ovl_pt] + reverse_string(v2.seq)
+		assert v1.seq[v1_ovl_start:] == reverse_complement(v2.seq[0:v2_ovl_end+1])
+		new_seq = v1.seq[0:v1_ovl_start] + reverse_complement(v2.seq)
+		# if not are_complements(v1.seq[v1_ovl_start:], reverse_string(v2.seq[0:v2_ovl_end+1])):
+		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_string(v2.seq)
 		# else:
-		# 	new_seq = v1.seq[0:ovl_pt] + reverse_string(reverse_complement(v2.seq))
+		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_string(reverse_complement(v2.seq))
 	else:
 		exit("ERROR: Incorrect orientation!")
 
-	assert len(new_seq) == len(v1.seq[0:ovl_pt]) + len(v2.seq)
+	assert len(new_seq) == len(v1.seq[0:v1_ovl_start]) + len(v2.seq)
 
 	new_v = OverlapVertex(new_id, new_seq)
 	new_v.head_edges = v1.head_edges
@@ -148,7 +148,7 @@ def contract_edge(g, e):
 	new_v.metadata['contig_starts'] = dict(v1.metadata['contig_starts'].items() + v2.metadata['contig_starts'].items())
 	new_v.metadata['contig_ends'] = dict(v1.metadata['contig_ends'].items() + v2.metadata['contig_ends'].items())
 
-	length_increase = len(v1.seq[0:ovl_pt])
+	length_increase = len(v1.seq[0:v1_ovl_start])
 
 	for ctg in v2.metadata['contigs']:
 		new_v.metadata['contig_starts'][ctg] += length_increase
