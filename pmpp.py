@@ -108,6 +108,11 @@ def spurious_connection(e):
 	else:
 		return True
 
+def delete_spurious_edges(g):
+	for e in g.edges:
+		if spurious_connection(e):
+			g.remove_edge(e)
+
 def resolve_repeats(g):
 	for v in g.vertices:
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
