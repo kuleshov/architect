@@ -1,4 +1,7 @@
+import os
+
 from intervals import get_intervals
+from libkuleshov.dna import reverse_complement
 
 def print_vertex(x):
 	print '================================='
@@ -31,9 +34,14 @@ def get_true_intervals(w, ctgs):
 		fields = ctg.split('_')
 		chrom, coords = fields[1].split(':')
 		start, end = (int(x) for x in coords.split('-'))
+
+		# correction for how we generated the reads. bed format is 1-based
+		start -= 1
+		end -= 1
+
 		internal_start = int(fields[2])
 
-		I.append((int(chrom), start + internal_start, start + internal_start + 200))
+		I.append((int(chrom), start + internal_start, start + internal_start + 199))
 
 	return get_intervals(I)
 
@@ -41,9 +49,14 @@ def print_true_coordinates(w, ctg):
 	fields = ctg.split('_')
 	chrom, coords = fields[1].split(':')
 	start, end = (int(x) for x in coords.split('-'))
+
+	# correction for how we generated the reads. bed format is 1-based
+	start -= 1
+	end -= 1
+
 	internal_start = int(fields[2])
 
-	print chrom, start + internal_start, start + internal_start + 200
+	print chrom, start + internal_start, start + internal_start + 199
 
 def print_true_intervals(w, ctgs):
 	I = list()
@@ -51,13 +64,107 @@ def print_true_intervals(w, ctgs):
 		fields = ctg.split('_')
 		chrom, coords = fields[1].split(':')
 		start, end = (int(x) for x in coords.split('-'))
-		internal_start = int(fields[2])
+		
+		# correction for how we generated the reads. bed format is 1-based
+		start -= 1
+		end -= 1
 
-		I.append((int(chrom), start + internal_start, start + internal_start + 200))
+		internal_start = int(fields[2])
+		I.append((int(chrom), start + internal_start, start + internal_start + 199))
 
 	merged_I = get_intervals(I)
 	for i in merged_I:
 		print '\t', i
+
+###############################################################################
+## EXAMINE POTENTIAL MISSASEMBLIES
+
+def load_genome():
+	GENOME_PATH="/home/kuleshov/metagenomica/simulate/rs/simulate_short_reads/renamed.ref"
+	FASTX_PATH="/home/kuleshov/lib/fastx"
+
+	genome = dict()
+	with os.popen('cat %s | %s/fasta_formatter' % (GENOME_PATH, FASTX_PATH)) as genome_file:
+		current_ctg = ""
+		for line in genome_file:
+			line.strip()
+			if line.startswith('>'):
+				current_ctg = int(line[1:])
+			else:
+				assert current_ctg and current_ctg not in genome
+				genome[current_ctg] = line
+
+	return genome
+
+def common_overlap(i1, i2):
+	# i2 -> i1?
+	for i1_start_in_i2 in xrange(len(i2)):
+		# l = len(i2) - i1_start_in_i2
+		l = len(i2[i1_start_in_i2:])
+		if i2[i1_start_in_i2:] == i1[:l]:
+			return i1[:l]
+
+	# i1 -> i2?
+	for i2_start_in_i1 in xrange(len(i1)):
+		# l = len(i1) - i2_start_in_i1
+		l = len(i1[i2_start_in_i1:])
+		if i1[i2_start_in_i1:] == i2[:l]:
+			return i2[:l]
+
+def print_containment(v, true_intervals, genome):
+	# if len(v.seq) > 250: return
+	print '-----------------------------------------------------------'
+	print 'ASSEMBLY:', v.id_, len(v.seq)
+	# print v.seq
+	print 'VERIFYING INTERVALS:', ', '.join([str(i) for i in true_intervals])
+
+	assembly = v.seq
+	for i in true_intervals:
+		print i, i[2]-i[1]+1,
+		true_region = genome[i[0]][i[1]:i[2]+1]
+
+		# try same strang:
+		for j in xrange(len(assembly)):
+			if true_region == assembly[j:j+len(true_region)]:
+				print j, j+len(true_region),
+				break
+
+		# try opposite strands:
+		true_region_opp = reverse_complement(true_region)
+		for j in xrange(len(assembly)):
+			if true_region_opp == assembly[j:j+len(true_region_opp)]:
+				print j, j+len(true_region_opp),
+				break
+
+		# print true_region
+		print
+
+def visualize_assembly(v, I, genome):
+	print v.seq
+	for i, ctg in enumerate(v.metadata['contigs']):
+		print ctg, v.metadata['contig_starts'][ctg], v.metadata['contig_ends'][ctg]
+		print genome[I[i][0]][I[i][1]:I[i][2]+1]
+
+
+def examine_repeats(intervals, genome):
+	print '-----------------------------------------------------------'
+	print 'VERIFYING INTERVALS:', ', '.join([str(i) for i in intervals])
+	for i in intervals:
+		print i, i[2] - i[1] + 1
+
+		# if i[2] - i[1] < 100:
+		# 	print genome[i[0]][i[1]:i[2]+1]
+		# else:
+		# 	print
+
+	if len(intervals) == 2:
+		a = intervals[0]
+		b = intervals[1]
+		o = common_overlap(genome[a[0]][a[1]:a[2]+1], genome[b[0]][b[1]:b[2]+1])
+		if o:
+			print o
+		else:
+			print "overlap not found"
 
 ###############################################################################
 ## SAVE TO DOT
@@ -93,12 +200,17 @@ def to_graphviz_dot(g, dot_file):
 		dot.write('}\n')
 
 def to_graphviz_dot_with_intervals(g, dot_file):
+	genome = load_genome()
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
 		for v in g.vertices:
 			I = get_true_intervals(v, v.metadata['contigs'])
+			# if v.id_== 3599553:
+			# 	visualize_assembly(v, I, genome)
 			if len(I) > 1:
 				color = "red"
+				# examine_repeats(I, genome)
+				print_containment(v, I, genome)
 			else:
 				color = "black"
 
