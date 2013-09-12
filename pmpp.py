@@ -1,5 +1,6 @@
 from string_graph import OverlapVertex
-from visualize import print_true_intervals
+from visualize import print_true_intervals, get_true_intervals
+from intervals import overlaps
 
 def examine_repeats(g):
 	MAX_V = 50
@@ -41,6 +42,71 @@ def examine_repeats(g):
 			print
 
 		print
+
+def examine_connections(g):
+	num_spurious = 0
+	wrong_calls = 0
+	for e in g.edges:
+		if spurious_connection(e):
+			num_spurious += 1
+			v1, v2 = e.v1, e.v2
+			# if e.connection[v1] == 'H':
+			# 	v1_wells = get_head_wells(v1)
+			# elif e.connection[v1] == 'T':
+			# 	v1_wells = get_tail_wells(v1)
+			# if e.connection[v2] == 'H':
+			# 	v2_wells = get_head_wells(v2)
+			# elif e.connection[v2] == 'T':
+			# 	v2_wells = get_tail_wells(v2)
+			v1_wells = get_wells(v1)
+			v2_wells = get_wells(v2)
+			I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+			I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
+			wrong_call = False
+			for i1 in I_v1:
+				for i2 in I_v2:
+					if overlaps(i1, i2):
+						wrong_call = True
+						break
+			if not wrong_call: continue
+			wrong_calls += 1
+			print '================================'
+			print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
+			% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
+					  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
+					  e.v2_orientation)
+			print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
+			print 'V1 wells:', ','.join([str(w) for w in v1_wells])
+			print 'I1', I_v1
+			print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
+			print 'V2 wells:', ','.join([str(w) for w in v2_wells])
+			print 'I2', I_v2
+
+	print 'Called %d spurious edges' % num_spurious
+	print 'Made %d wrong calls' % wrong_calls
+
+def spurious_connection(e):
+	v1, v2 = e.v1, e.v2
+
+	# if e.connection[v1] == 'H':
+	# 	v1_wells = get_head_wells(v1)
+	# elif e.connection[v1] == 'T':
+	# 	v1_wells = get_tail_wells(v1)
+	# if e.connection[v2] == 'H':
+	# 	v2_wells = get_head_wells(v2)
+	# elif e.connection[v2] == 'T':
+	# 	v2_wells = get_tail_wells(v2)
+	v1_wells = get_wells(v1)
+	v2_wells = get_wells(v2)
+
+	# look at edge wells: 119 calls, 17 wrong
+	# 82 calls, 0 wrong:
+	# if v1_wells & v2_wells or len(v1_wells) < 3 or len(v2_wells) < 3:
+	# 94 calls, 5 wrong:
+	if v1_wells & v2_wells or len(v1_wells) < 3 or len(v2_wells) < 3:
+		return False
+	else:
+		return True
 
 def resolve_repeats(g):
 	for v in g.vertices:

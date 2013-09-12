@@ -5,7 +5,7 @@ from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals
 from graph_stats import graph_n50, graph_avg
 
 from contraction import contract_edges
-from pmpp import resolve_repeats, examine_repeats
+from pmpp import resolve_repeats, examine_repeats, examine_connections
 from remove_transitive import pop_triangles
 
 from libkuleshov.debug import keyboard
@@ -44,6 +44,8 @@ print_stats(g)
 
 contract_edges(g)	
 print_stats(g)
+
+examine_connections(g)
 
 to_graphviz_dot_with_intervals(g, 'out.dot')
 exit()

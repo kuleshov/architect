@@ -252,8 +252,8 @@ def to_graphviz_dot_with_intervals(g, dot_file):
 			if len(I) > 1:
 				color = "red"
 				# examine_repeats(I, genome)
-				if is_misassembly(v, I, genome):
-					print_containment(v, I, genome)
+				# if is_misassembly(v, I, genome):
+					# print_containment(v, I, genome)
 			else:
 				color = "black"
 
