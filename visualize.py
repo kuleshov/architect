@@ -191,6 +191,17 @@ def is_misassembly(v, true_intervals, genome):
 
 	return False
 
+def examine_misassemblies(g):
+	genome = load_genome()
+	for v in g.vertices:
+		I = get_true_intervals(v, v.metadata['contigs'])
+		# if v.id_== 3599553:
+		# 	visualize_assembly(v, I, genome)
+		if len(I) > 1:
+			# examine_repeats(I, genome)
+			if is_misassembly(v, I, genome):
+				print_containment(v, I, genome)
+
 ###############################################################################
 ## VISUALIZE SUB-COMPONENTS OF THE GRAPH
 
