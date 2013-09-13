@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import argparse
 from graph_load import load_from_sga_asqg, save_graph, load_graph
-from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals
+from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
+					  examine_misassemblies
 from graph_stats import graph_n50, graph_avg
 
 from contraction import contract_edges
-from pmpp import resolve_repeats, examine_repeats, delete_spurious_edges
+from pmpp import resolve_repeats, examine_repeats, delete_spurious_edges, get_well
 from remove_transitive import pop_triangles
 
 from libkuleshov.debug import keyboard
@@ -18,6 +19,13 @@ parser.add_argument('--asqg')
 parser.add_argument('--all_asqg')
 
 args = parser.parse_args()
+
+def find_read(g, id_):
+	for v in g.vertices:
+		if id_ in v.metadata['contigs']:
+			for ctg in v.metadata['contigs']:
+				print v.metadata['contig_starts'][ctg], get_well(ctg)
+			return v
 
 
 ##############################################################################			
@@ -48,6 +56,22 @@ print_stats(g)
 delete_spurious_edges(g)
 contract_edges(g)
 print_stats(g)
+
+# for i in xrange(10):
+# 	resolve_repeats(g)
+
+for i in xrange(2):
+	resolve_repeats(g, wells='all')
+
+# contract_edges(g)
+examine_repeats(g)
+print_stats(g)
+
+# v_found = find_read(g, 'well183_4:1431085-1441085_9441_1_1_0_0_0_0:0:0_0:0:0_1c')
+# if v_found:
+# 	print v_found.id_
+# else:
+# 	print 'Not found'
 
 to_graphviz_dot_with_intervals(g, 'out.dot')
 exit()
