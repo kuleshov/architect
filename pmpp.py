@@ -42,29 +42,40 @@ def examine_connections(g):
 	num_spurious = 0
 	wrong_calls = 0
 	for e in g.edges:
+		v1, v2 = e.v1, e.v2
+
+		if e.connection[v1] == 'H':
+			v1_wells = get_head_wells(v1)
+		elif e.connection[v1] == 'T':
+			v1_wells = get_tail_wells(v1)
+		if e.connection[v2] == 'H':
+			v2_wells = get_head_wells(v2)
+		elif e.connection[v2] == 'T':
+			v2_wells = get_tail_wells(v2)
+		# v1_wells = get_wells(v1)
+		# v2_wells = get_wells(v2)
+
+		I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+		I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
+
 		if spurious_connection(e):
 			num_spurious += 1
-			v1, v2 = e.v1, e.v2
-			# if e.connection[v1] == 'H':
-			# 	v1_wells = get_head_wells(v1)
-			# elif e.connection[v1] == 'T':
-			# 	v1_wells = get_tail_wells(v1)
-			# if e.connection[v2] == 'H':
-			# 	v2_wells = get_head_wells(v2)
-			# elif e.connection[v2] == 'T':
-			# 	v2_wells = get_tail_wells(v2)
-			v1_wells = get_wells(v1)
-			v2_wells = get_wells(v2)
-			I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
-			I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
 			wrong_call = False
 			for i1 in I_v1:
 				for i2 in I_v2:
 					if overlaps(i1, i2):
 						wrong_call = True
 						break
-			if not wrong_call: continue
 			wrong_calls += 1
+
+		# if true spurious connection, print:
+		spurious = True
+		for i1 in I_v1:
+			for i2 in I_v2:
+				if overlaps(i1, i2):
+					spurious = False
+
+		if spurious:
 			print '================================'
 			print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
 			% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
@@ -83,16 +94,16 @@ def examine_connections(g):
 def spurious_connection(e):
 	v1, v2 = e.v1, e.v2
 
-	# if e.connection[v1] == 'H':
-	# 	v1_wells = get_head_wells(v1)
-	# elif e.connection[v1] == 'T':
-	# 	v1_wells = get_tail_wells(v1)
-	# if e.connection[v2] == 'H':
-	# 	v2_wells = get_head_wells(v2)
-	# elif e.connection[v2] == 'T':
-	# 	v2_wells = get_tail_wells(v2)
-	v1_wells = get_wells(v1)
-	v2_wells = get_wells(v2)
+	if e.connection[v1] == 'H':
+		v1_wells = get_head_wells(v1)
+	elif e.connection[v1] == 'T':
+		v1_wells = get_tail_wells(v1)
+	if e.connection[v2] == 'H':
+		v2_wells = get_head_wells(v2)
+	elif e.connection[v2] == 'T':
+		v2_wells = get_tail_wells(v2)
+	# v1_wells = get_wells(v1)
+	# v2_wells = get_wells(v2)
 
 	# look at edge wells: 119 calls, 17 wrong
 	# 82 calls, 0 wrong:
@@ -174,14 +185,14 @@ def try_to_resolve(v, g, wells='edges'):
 		# wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
 		wells = ','.join([str(well) for well in get_wells(w) if well in T_wells])
 		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_ends'][ctg] > len(w) - 100])
+		print_true_intervals(w, [ctg for ctg in w.metadata['contig_ends'] if w.metadata['contig_ends'][ctg] > len(w) - 100])
 	print 'T:'
 	for e in T:
 		w = e.other_vertex(v)
 		# wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
 		wells = ','.join([str(well) for well in get_wells(w) if well in H_wells])
 		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_starts'][ctg] < 100])
+		print_true_intervals(w, [ctg for ctg in w.metadata['contig_ends'] if w.metadata['contig_starts'][ctg] < 100])
 		# for ctg in w.metadata['contigs'][:15]:
 		# 	if w.metadata['contig_ends'][ctg] < 100:
 		# 		print_true_coordinates(w, ctg)
@@ -261,12 +272,12 @@ def get_wells(v):
 	return {get_well(ctg) for ctg in v.metadata['contigs']}
 
 def get_head_wells(v):
-	return {get_well(ctg) for ctg in v.metadata['contigs']
+	return {get_well(ctg) for ctg in v.metadata['contig_starts']
 			if v.metadata['contig_starts'][ctg] < 100}
 
 def get_tail_wells(v):
 	len_v = len(v)
-	return {get_well(ctg) for ctg in v.metadata['contigs']
+	return {get_well(ctg) for ctg in v.metadata['contig_ends']
 			if v.metadata['contig_ends'][ctg] > len_v - 100}
 
 def get_well(ctg):
