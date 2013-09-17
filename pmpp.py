@@ -125,42 +125,41 @@ def try_to_resolve(v, g, wells='edges'):
 	if wells == 'edges':
 		T_wells = {well for e in T for well in get_head_wells(e.other_vertex(v))}
 		H_wells = {well for e in H for well in get_tail_wells(e.other_vertex(v))}
+		T_wells_map = {e: get_head_wells(e.other_vertex(v)) for e in T}
+		H_wells_map = {e: get_tail_wells(e.other_vertex(v)) for e in H}
 	else:
 		T_wells = {well for e in T for well in get_wells(e.other_vertex(v))}
 		H_wells = {well for e in H for well in get_wells(e.other_vertex(v))}
-	T_wells_map = {e: get_head_wells(e.other_vertex(v)) for e in T}
-	H_wells_map = {e: get_tail_wells(e.other_vertex(v)) for e in H}
+		T_wells_map = {e: get_wells(e.other_vertex(v)) for e in T}
+		H_wells_map = {e: get_wells(e.other_vertex(v)) for e in H}
 
+	# calculate which wells occur uniquely on edges on either side
+	# i.e. H_support_map[w] = e iff e is the only edge in H that contains w
 	T_support_map = get_unique_support(T_wells_map)
 	H_support_map = get_unique_support(H_wells_map)
 
-	# print [(well, e.id_) for well, e in H_support_map.iteritems() if e is not None]
-	# print [(well, e.id_) for well, e in T_support_map.iteritems() if e is not None]
-
-	# e_head <-> e_tail if exists well w
-	# s.t. w occurs only in e_head in H
-	# and only in e_tail in T
-	H_to_T = {e: set() for e in H}
-	T_to_H = {e: set() for e in T}
+	# compute weights for the edges in the graph H <-> T
+	edge_pair_weights = {(e_head, e_tail): 0 for e_head in H for e_tail in T}
 	for well in v_wells:
 		# if has_support(w, v):
 		e_head = H_support_map.get(well, None)
 		e_tail = T_support_map.get(well, None)
 		if e_head and e_tail:
-			# print well, e_head.id_, e_tail.id_
-			H_to_T[e_head].add(e_tail)
-			T_to_H[e_tail].add(e_head)
+			edge_pair_weights[(e_head, e_tail)] += 1
 	
-	# only keep pairs that e_head <-> e_tail
-	# in which both e have degree 1
+	# connect a e_head -> e_tail pair if it is supported by >= 3 wells than
+	# the second best option
 	pairs_to_resolve = set()
-	for e_head in H:
-		# print e_head.id_, [f.id_ for f in H_to_T[e_head]]
-		if len(H_to_T[e_head]) == 1:
-			e_tail = list(H_to_T[e_head])[0]
-			e_reverse = list(T_to_H[e_tail])[0]
-			if len(T_to_H[e_tail]) == 1 and e_head == e_reverse:
-				pairs_to_resolve.add((e_tail,e_head))
+	for edge_pair, weight in edge_pair_weights.iteritems():
+		if weight == 0: continue
+		e_head, e_tail = edge_pair
+		alternative_pairs = {(e_h, e_t) for e_h in H for e_t in T if e_h == e_head or e_t == e_tail}
+		sorted_pairs = sorted(alternative_pairs, key=lambda x: edge_pair_weights[x], reverse=True)
+
+		if sorted_pairs[0] != edge_pair: continue
+		if len(sorted_pairs) == 1 \
+		or edge_pair_weights[sorted_pairs[0]] - edge_pair_weights[sorted_pairs[1]] >= 3:
+			pairs_to_resolve.add((e_tail, e_head))
 	
 	print '================================='
 	print 'Vertex: %d' % v.id_
@@ -187,6 +186,7 @@ def try_to_resolve(v, g, wells='edges'):
 		# 	if w.metadata['contig_ends'][ctg] < 100:
 		# 		print_true_coordinates(w, ctg)
 	print
+	print {(e_h.id_, e_t.id_, edge_pair_weights[(e_h, e_t)]) for e_h in H for e_t in T}
 
 	for e_tail, e_head in pairs_to_resolve:
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
