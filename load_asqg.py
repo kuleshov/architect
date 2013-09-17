@@ -53,11 +53,16 @@ print_stats(g)
 contract_edges(g)	
 print_stats(g)
 
-# delete_spurious_edges(g)
-examine_connections(g)
+##############################################################################			
+## DELETE SPURIOUS EDGES
+
+delete_spurious_edges(g)
+# examine_connections(g)
+
+contract_edges(g)
+print_stats(g)
+
 exit()
-# contract_edges(g)
-# print_stats(g)
 
 # # for i in xrange(10):
 # # 	resolve_repeats(g)

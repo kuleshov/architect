@@ -66,7 +66,20 @@ def examine_connections(g):
 					if overlaps(i1, i2):
 						wrong_call = True
 						break
-			wrong_calls += 1
+			if wrong_call:
+				print '================================'
+				print 'WRONG CALL:'
+				print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
+				% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
+						  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
+						  e.v2_orientation)
+				print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
+				print 'V1 wells:', ','.join([str(w) for w in v1_wells])
+				print 'I1', I_v1
+				print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
+				print 'V2 wells:', ','.join([str(w) for w in v2_wells])
+				print 'I2', I_v2
+				wrong_calls += 1
 
 		# if true spurious connection, print:
 		spurious = True
@@ -75,7 +88,7 @@ def examine_connections(g):
 				if overlaps(i1, i2):
 					spurious = False
 
-		if spurious:
+		if spurious and not spurious_connection(e):
 			print '================================'
 			print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
 			% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
@@ -105,11 +118,18 @@ def spurious_connection(e):
 	# v1_wells = get_wells(v1)
 	# v2_wells = get_wells(v2)
 
-	# look at edge wells: 119 calls, 17 wrong
-	# 82 calls, 0 wrong:
-	# if v1_wells & v2_wells or len(v1_wells) < 3 or len(v2_wells) < 3:
-	# 94 calls, 5 wrong:
-	if v1_wells & v2_wells or len(v1_wells) < 3 or len(v2_wells) < 3:
+	common_wells = v1_wells & v2_wells
+	v1_fraction = len(common_wells) / float(len(v1_wells))
+	v2_fraction = len(common_wells) / float(len(v2_wells))
+
+	# len(v1_wells) + len(v2_wells) < 3 ---> 114 calls, 10 wrong, to FN
+	# avg len: 30k (from 12k), 11 conn. comp.
+	# below ---> 96 calls, 3 wrong
+	# avg len: 26k, 9 conn. comp.
+	# IDEA: do this in several steps, b/c larger contigs -> more wells
+
+	if v1_fraction > 0.25 or v2_fraction > 0.25 \
+	or len(v1_wells) < 3 or len(v2_wells) < 3:
 		return False
 	else:
 		return True
