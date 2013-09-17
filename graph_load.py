@@ -245,8 +245,9 @@ def load_containment(g, containment_file):
 				v.metadata['contig_ends'] = dict()
 			v.metadata['contigs'].append(ctg)
 
-			v.metadata['contig_starts'][ctg] = int(fields[2])
-			v.metadata['contig_ends'][ctg] = int(fields[3])
+			if fields[2] != '-1':
+				v.metadata['contig_starts'][ctg] = int(fields[2])
+				v.metadata['contig_ends'][ctg] = int(fields[3])
 
 def save_graph(g, asqg_file, containment_file):
 	write_asqg(g, asqg_file)
@@ -267,7 +268,7 @@ def write_containment(g, containment_file):
 	with open(containment_file, 'w') as out:
 		for v in g.vertices:
 			for ctg in v.metadata['contigs']:
-				out.write('%d\t%s\t%d\t%d\n' % (v.id_, ctg, v.metadata['contig_starts'][ctg], v.metadata['contig_ends'][ctg]))
+				out.write('%d\t%s\t%d\t%d\n' % (v.id_, ctg, v.metadata['contig_starts'].get(ctg,-1), v.metadata['contig_ends'].get(ctg,-1)))
 
 def to_stabq(g, stabq_file):
 	with open(stabq_file) as stabq:

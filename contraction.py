@@ -9,10 +9,8 @@ def contract_edges(g):
 	# remove_parallel_edges
 
 	while candidate_edges:
-		for e in g.edges:
-			if e.connection[e.v1] == 'T' and e.connection[e.v2] == 'H':
-				assert e in e.v1.tail_edges
-				assert e in e.v2.head_edges
+		if len(candidate_edges) % 10000 == 0:
+			print len(candidate_edges)
 		e = candidate_edges.pop()
 		# if e.v1.id_ == '6074-1_1044-1': keyboard()
 		E = e.v1.edges | e.v2.edges
@@ -40,7 +38,6 @@ def remove_parallel_edges(g):
 			e.v1.disconnect_edge(e)
 			e.v2.disconnect_edge(e)
 
-
 def can_be_contracted(e):
 	v1, v2 = e.v1, e.v2
 
@@ -64,6 +61,7 @@ def can_be_contracted(e):
 
 	return False
 
+# FIXME: Make this a method of StringGraph
 def flip_vertex(v, g):
 	for e in v.edges:
 		e.v2_orientation = (e.v2_orientation + 1) % 2
@@ -71,6 +69,14 @@ def flip_vertex(v, g):
 
 	v.seq = reverse_complement(v.seq)
 	v.head_edges, v.tail_edges = v.tail_edges, v.head_edges
+
+	v_len = len(v.seq)
+
+	v_ctg_starts = v.metadata['contig_starts'].copy()
+	v_ctg_ends = v.metadata['contig_ends'].copy()
+	for ctg in v.metadata['contig_starts']:
+		v.metadata['contig_starts'][ctg] = v_len - v_ctg_ends[ctg] - 1
+		v.metadata['contig_ends'][ctg] = v_len - v_ctg_starts[ctg] - 1
 
 def sequences_equal(s1, s2):
 	if s1 == s2 or s1 == reverse_complement(s2):
@@ -124,17 +130,9 @@ def contract_edge(g, e):
 	if orientation == 0:
 		assert v1.seq[v1_ovl_start:] == v2.seq[0:v2_ovl_end+1]
 		new_seq = v1.seq[0:v1_ovl_start] + v2.seq
-		# if not are_complements(v1.seq[v1_ovl_start:], v2.seq[0:v2_ovl_end+1]):
-		# 	new_seq = v1.seq[0:v1_ovl_start] + v2.seq
-		# else:
-		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_complement(v2.seq)
 	elif orientation == 1:
 		assert v1.seq[v1_ovl_start:] == reverse_complement(v2.seq[0:v2_ovl_end+1])
 		new_seq = v1.seq[0:v1_ovl_start] + reverse_complement(v2.seq)
-		# if not are_complements(v1.seq[v1_ovl_start:], reverse_string(v2.seq[0:v2_ovl_end+1])):
-		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_string(v2.seq)
-		# else:
-		# 	new_seq = v1.seq[0:v1_ovl_start] + reverse_string(reverse_complement(v2.seq))
 	else:
 		exit("ERROR: Incorrect orientation!")
 
@@ -145,14 +143,33 @@ def contract_edge(g, e):
 	new_v.tail_edges = v2.tail_edges
 
 	new_v.metadata['contigs'] = v1.metadata['contigs'] + v2.metadata['contigs']
-	new_v.metadata['contig_starts'] = dict(v1.metadata['contig_starts'].items() + v2.metadata['contig_starts'].items())
-	new_v.metadata['contig_ends'] = dict(v1.metadata['contig_ends'].items() + v2.metadata['contig_ends'].items())
+	v2_ctg_starts = v2.metadata['contig_starts'].copy()
+	v2_ctg_ends = v2.metadata['contig_ends'].copy()
+	if orientation == 1:
+		v2_len = len(v2.seq)
+		for ctg in v2.metadata['contig_starts']:
+			v2_ctg_starts[ctg] = v2_len - v2.metadata['contig_ends'][ctg] - 1
+			v2_ctg_ends[ctg] = v2_len - v2.metadata['contig_starts'][ctg] - 1
+
+	new_v.metadata['contig_starts'] = dict(v1.metadata['contig_starts'].items() + v2_ctg_starts.items())
+	new_v.metadata['contig_ends'] = dict(v1.metadata['contig_ends'].items() + v2_ctg_ends.items())
+
+	for ctg in new_v.metadata['contig_starts']:
+		assert new_v.metadata['contig_ends'][ctg] - new_v.metadata['contig_starts'][ctg] == 199
 
 	length_increase = len(v1.seq[0:v1_ovl_start])
 
-	for ctg in v2.metadata['contigs']:
+	for ctg in v2.metadata['contig_starts']:
 		new_v.metadata['contig_starts'][ctg] += length_increase
 		new_v.metadata['contig_ends'][ctg] += length_increase
+
+	all_ctgs = new_v.metadata['contig_starts'].copy()
+	new_len = len(new_v.seq)
+	for ctg in all_ctgs:
+		if 1500 < new_v.metadata['contig_starts'][ctg] \
+		<= new_v.metadata['contig_ends'][ctg] < new_len - 1500:
+			del new_v.metadata['contig_starts'][ctg]
+			del new_v.metadata['contig_ends'][ctg]
 
 	# correct edges incident to first_v
 	for f in v1.head_edges:
