@@ -79,12 +79,12 @@ def spurious_connection(e, conservative=True):
 	if (e.connection[v1] == 'H' and len(v1.head_edges) == 1):
 		if e.connection[v2] == 'T' and len(v2.tail_edges) == 1 \
 		or e.connection[v2] == 'H' and len(v2.head_edges) == 1:
-			print e.id_, 'path'
+			# print e.id_, 'path'
 			return False
 	elif (e.connection[v1] == 'T' and len(v1.tail_edges) == 1):
 		if e.connection[v2] == 'T' and len(v2.tail_edges) == 1 \
 		or e.connection[v2] == 'H' and len(v2.head_edges) == 1:
-			print e.id_, 'path'
+			# print e.id_, 'path'
 			return False
 
 	if e.connection[v1] == 'H':
@@ -249,19 +249,17 @@ def try_to_resolve(v, g, wells='edges'):
 			print 'AFTER:'
 			print 'H:'
 			for e in v.head_edges:
-				w = e.other_vertex(v)
+				if e not in H: continue
 				wells = ','.join([str(well) for well in H_wells_map[e] if well in T_wells])
 				print e.id_, '\t', wells
 			print 'T:'
 			for e in v.tail_edges:
-				w = e.other_vertex(v)
+				if e not in T: continue
 				wells = ','.join([str(well) for well in T_wells_map[e] if well in H_wells])
 				print e.id_, '\t', wells
 			print '+'
-			w = e_head.other_vertex(v_new)
 			wells = ','.join([str(well) for well in H_wells_map[e_head] if well in T_wells])
 			print e_head.id_, '\t', wells
-			w = e_tail.other_vertex(v_new)
 			wells = ','.join([str(well) for well in T_wells_map[e_tail] if well in H_wells])
 			print e_tail.id_, '\t', wells
 
