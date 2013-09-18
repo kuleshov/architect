@@ -281,12 +281,12 @@ def get_wells(v):
 
 def get_head_wells(v):
 	return {get_well(ctg) for ctg in v.metadata['contig_starts']
-			if v.metadata['contig_starts'][ctg] < 100}
+			if v.metadata['contig_starts'][ctg] < 500}
 
 def get_tail_wells(v):
 	len_v = len(v)
 	return {get_well(ctg) for ctg in v.metadata['contig_ends']
-			if v.metadata['contig_ends'][ctg] > len_v - 100}
+			if v.metadata['contig_ends'][ctg] > len_v - 500}
 
 def get_well(ctg):
 	assert ctg.startswith('well')
