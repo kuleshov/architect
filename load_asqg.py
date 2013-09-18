@@ -2,7 +2,7 @@
 import argparse
 from graph_load import load_from_sga_asqg, save_graph, load_graph
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
-					  examine_misassemblies
+					  examine_misassemblies, to_graphviz_dot_with_double_intervals
 from graph_stats import graph_n50, graph_avg
 
 from contraction import contract_edges
@@ -41,49 +41,72 @@ def print_stats(g):
 ##############################################################################			
 ## LOAD
 
-g = load_graph('graph.asqg', 'graph.containment')
+CHECKPOINTDIR = 'checkpoints/working/'
+
+# g = load_graph('graph.asqg', 'graph.containment')
+# print_stats(g)
+
+# g = load_graph(CHECKPOINTDIR + 'graph.04.repruned.asqg', 
+# 			  CHECKPOINTDIR + 'graph.04.repruned.containment')
+
+g = load_graph(CHECKPOINTDIR + 'graph.01.contracted.asqg', 
+			  CHECKPOINTDIR + 'graph.01.contracted.containment')
+
 print_stats(g)
 
 # g = load_from_sga_asqg(args.asqg)
 # print_stats(g)
 
+# save_graph(g, CHECKPOINTDIR + 'graph.00.loaded.asqg', 
+# 			  CHECKPOINTDIR + 'graph.00.loaded.containment')
+
 # ##############################################################################			
 # ## CONTRACT PATHS
 
-contract_edges(g)	
-print_stats(g)
+# contract_edges(g)	
+# print_stats(g)
+
+# save_graph(g, CHECKPOINTDIR + 'graph.01.contracted.asqg', 
+# 			  CHECKPOINTDIR + 'graph.01.contracted.containment')
 
 # ##############################################################################			
 # ## DELETE SPURIOUS EDGES
 
-delete_spurious_edges(g)
-# # examine_connections(g)
+# delete_spurious_edges(g)
+# # # examine_connections(g)
 
-# contract_edges(g)
+# # contract_edges(g)
 # print_stats(g)
 
+# save_graph(g, CHECKPOINTDIR + 'graph.02.pruned.asqg', 
+# 			  CHECKPOINTDIR + 'graph.02.pruned.containment')
+
 # # examine_misassemblies(g)
-
-# save_graph(g, 'graph.asqg', 'graph.containment')
-# # exit()
-
 
 ##############################################################################			
 ## RESOLVE REPEATS
 
-for i in xrange(4):
-	resolve_repeats(g, wells='edges')
+# for i in xrange(4):
+# 	resolve_repeats(g, wells='edges')
 
-# # # contract_edges(g)
-examine_repeats(g)
+# # # # contract_edges(g)
+# examine_repeats(g)
 # print_stats(g)
 
-# save_graph(g, 'graph.asqg', 'graph.containment')
+# save_graph(g, CHECKPOINTDIR + 'graph.03.resolved.asqg', 
+# 			  CHECKPOINTDIR + 'graph.03.resolved.containment')
 
-# examine_connections(g, conservative=False)
+# # save_graph(g, 'graph.asqg', 'graph.containment')
+
+# # examine_connections(g, conservative=False)
 # delete_spurious_edges(g, conservative=False)
 
+# save_graph(g, CHECKPOINTDIR + 'graph.04.repruned.asqg', 
+# 			  CHECKPOINTDIR + 'graph.04.repruned.containment')
+
+contract_edges(g)
 to_graphviz_dot_with_intervals(g, 'out.dot')
+print_stats(g)
 
 exit()
 
