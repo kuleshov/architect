@@ -47,45 +47,39 @@ print_stats(g)
 # g = load_from_sga_asqg(args.asqg)
 # print_stats(g)
 
-##############################################################################			
-## CONTRACT PATHS
+# ##############################################################################			
+# ## CONTRACT PATHS
 
-contract_edges(g)	
-print_stats(g)
-
-##############################################################################			
-## DELETE SPURIOUS EDGES
-
-delete_spurious_edges(g)
-# examine_connections(g)
-
-contract_edges(g)
-print_stats(g)
-
-exit()
-
-# # for i in xrange(10):
-# # 	resolve_repeats(g)
-
-# print 'WTF???'
-
-# for i in xrange(2):
-# 	resolve_repeats(g, wells='edges')
-
-# print 'WWWWTTTFFFF'
-
-# # contract_edges(g)
-# examine_repeats(g)
+# contract_edges(g)	
 # print_stats(g)
 
-# v_found = find_read(g, 'well183_4:1431085-1441085_9441_1_1_0_0_0_0:0:0_0:0:0_1c')
-# if v_found:
-# 	print v_found.id_
-# else:
-# 	print 'Not found'
+# ##############################################################################			
+# ## DELETE SPURIOUS EDGES
 
-# to_graphviz_dot_with_intervals(g, 'out.dot')
+# delete_spurious_edges(g)
+# # examine_connections(g)
+
+# contract_edges(g)
+# print_stats(g)
+
+# # examine_misassemblies(g)
+
+# save_graph(g, 'graph.asqg', 'graph.containment')
 # exit()
+
+
+##############################################################################			
+## RESOLVE REPEATS
+
+for i in xrange(5):
+	resolve_repeats(g, wells='edges')
+
+# # contract_edges(g)
+examine_repeats(g)
+# print_stats(g)
+
+to_graphviz_dot_with_intervals(g, 'out.dot')
+exit()
 
 ##############################################################################			
 ## REMOVE TRANSITIVE EDGES:

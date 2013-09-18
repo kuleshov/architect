@@ -2,41 +2,37 @@ from string_graph import OverlapVertex
 from visualize import print_true_intervals, get_true_intervals
 from intervals import overlaps
 
-def examine_repeats(g):
-	MAX_V = 50
-	for count, v in enumerate(g.vertices):
-		# if count >= MAX_V: break
-		T = v.tail_edges
-		H = v.head_edges
+###############################################################################
+## REMOVAL OF SPURIOUS EDGES
 
-		if len(T) == 0 or len(H) == 0: continue
-		if len(T) + len(H) <= 2: continue
+def print_connection(e):
+	v1, v2 = e.v1, e.v2
 
-		print '================================'
-		print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+	if e.connection[v1] == 'H':
+		v1_wells = get_head_wells(v1)
+	elif e.connection[v1] == 'T':
+		v1_wells = get_tail_wells(v1)
+	if e.connection[v2] == 'H':
+		v2_wells = get_head_wells(v2)
+	elif e.connection[v2] == 'T':
+		v2_wells = get_tail_wells(v2)
+	# v1_wells = get_wells(v1)
+	# v2_wells = get_wells(v2)
 
-		# T_wells = {well for e in T for well in get_head_wells(e.other_vertex(v))}
-		# H_wells = {well for e in H for well in get_tail_wells(e.other_vertex(v))}
-		T_wells = {well for e in T for well in get_wells(e.other_vertex(v))}
-		H_wells = {well for e in H for well in get_wells(e.other_vertex(v))}
+	I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+	I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
 
-		for e in T:
-			w = e.other_vertex(v)
-			# wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
-			wells = ','.join([str(well) for well in get_head_wells(w)])
-			print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
-			print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
-
-		print '-------------------------------'
-
-		for e in H:
-			w = e.other_vertex(v)
-			wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
-			wells = ','.join([str(well) for well in get_tail_wells(w)])
-			print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
-			print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
-
-		print
+	print '================================'
+	print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
+	% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
+			  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
+			  e.v2_orientation)
+	print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
+	print 'V1 wells:', ','.join([str(w) for w in v1_wells])
+	print 'I1', I_v1
+	print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
+	print 'V2 wells:', ','.join([str(w) for w in v2_wells])
+	print 'I2', I_v2
 
 def examine_connections(g):
 	num_spurious = 0
@@ -44,22 +40,11 @@ def examine_connections(g):
 	for e in g.edges:
 		v1, v2 = e.v1, e.v2
 
-		if e.connection[v1] == 'H':
-			v1_wells = get_head_wells(v1)
-		elif e.connection[v1] == 'T':
-			v1_wells = get_tail_wells(v1)
-		if e.connection[v2] == 'H':
-			v2_wells = get_head_wells(v2)
-		elif e.connection[v2] == 'T':
-			v2_wells = get_tail_wells(v2)
-		# v1_wells = get_wells(v1)
-		# v2_wells = get_wells(v2)
-
-		I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
-		I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
-
 		if spurious_connection(e):
 			num_spurious += 1
+			I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+			I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
+
 			wrong_call = False
 			for i1 in I_v1:
 				for i2 in I_v2:
@@ -67,18 +52,8 @@ def examine_connections(g):
 						wrong_call = True
 						break
 			if wrong_call:
-				print '================================'
-				print 'WRONG CALL:'
-				print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
-				% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
-						  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
-						  e.v2_orientation)
-				print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
-				print 'V1 wells:', ','.join([str(w) for w in v1_wells])
-				print 'I1', I_v1
-				print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
-				print 'V2 wells:', ','.join([str(w) for w in v2_wells])
-				print 'I2', I_v2
+				print '>>> WRONG CONNECTION:'
+				print_connection(e)
 				wrong_calls += 1
 
 		# if true spurious connection, print:
@@ -89,17 +64,7 @@ def examine_connections(g):
 					spurious = False
 
 		if spurious and not spurious_connection(e):
-			print '================================'
-			print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
-			% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
-					  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
-					  e.v2_orientation)
-			print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
-			print 'V1 wells:', ','.join([str(w) for w in v1_wells])
-			print 'I1', I_v1
-			print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
-			print 'V2 wells:', ','.join([str(w) for w in v2_wells])
-			print 'I2', I_v2
+			print_connection(e)
 
 	print 'Called %d spurious edges' % num_spurious
 	print 'Made %d wrong calls' % wrong_calls
@@ -139,30 +104,74 @@ def delete_spurious_edges(g):
 		if spurious_connection(e):
 			g.remove_edge(e)
 
+
+###############################################################################
+## REPEAT RESOLUTION
+
+def examine_repeats(g):
+	MAX_V = 50
+	for count, v in enumerate(g.vertices):
+		# if count >= MAX_V: break
+		T = v.tail_edges
+		H = v.head_edges
+
+		if len(T) == 0 or len(H) == 0: continue
+		if len(T) + len(H) <= 2: continue
+
+		print_repeat(v)
+
+def print_repeat(v):
+	wells_by_edge = get_wells_by_edge(v, v.edges)
+
+	print '================================'
+	print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+
+	T_wells = {well for e in v.tail_edges for well in wells_by_edge[e]}
+	H_wells = {well for e in v.head_edges for well in wells_by_edge[e]}
+
+	for e in v.tail_edges:
+		w = e.other_vertex(v)
+		wells = ','.join([str(well) for well in wells_by_edge[e] if well in H_wells])
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
+
+	print '-------------------------------'
+
+	for e in v.head_edges:
+		w = e.other_vertex(v)
+		wells = ','.join([str(well) for well in wells_by_edge[e] if well in T_wells])
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
+
+	print
+
 def resolve_repeats(g, wells='edges'):
 	for v in g.vertices:
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
 			try_to_resolve(v, g, wells=wells)
 
+def get_wells_by_edge(v, E):
+	wells_by_edge = {e: set() for e in E}
+	for e in E:
+		w = e.other_vertex(v)
+		if e.connection[w] == 'H':
+			wells_by_edge[e] = get_head_wells(w)
+		elif e.connection[w] == 'T':
+			wells_by_edge[e] = get_tail_wells(w)
+		else:
+			exit("Error.")
+
+	return wells_by_edge
+
 def try_to_resolve(v, g, wells='edges'):
-	print '>>>>>', wells
 	H = {e for e in v.head_edges if e.v1 != e.v2}
 	T = {e for e in v.tail_edges if e.v1 != e.v2}
 
-	# for e in (H | T):
-	# 	assert v == e.v1 or v == e.v2
-
+	# place the wells of neighbouring vertices into a dict, such that
+	# H_wells_map[e] = wells(e.other_vertex(v))
 	v_wells = get_wells(v)
-	if wells == 'edges':
-		T_wells = {well for e in T for well in get_head_wells(e.other_vertex(v))}
-		H_wells = {well for e in H for well in get_tail_wells(e.other_vertex(v))}
-		T_wells_map = {e: get_head_wells(e.other_vertex(v)) for e in T}
-		H_wells_map = {e: get_tail_wells(e.other_vertex(v)) for e in H}
-	else:
-		T_wells = {well for e in T for well in get_wells(e.other_vertex(v))}
-		H_wells = {well for e in H for well in get_wells(e.other_vertex(v))}
-		T_wells_map = {e: get_wells(e.other_vertex(v)) for e in T}
-		H_wells_map = {e: get_wells(e.other_vertex(v)) for e in H}
+	H_wells_map = get_wells_by_edge(v, H)
+	T_wells_map = get_wells_by_edge(v, T)
 
 	# calculate which wells occur uniquely on edges on either side
 	# i.e. H_support_map[w] = e iff e is the only edge in H that contains w
@@ -191,33 +200,13 @@ def try_to_resolve(v, g, wells='edges'):
 		if len(sorted_pairs) == 1 \
 		or edge_pair_weights[sorted_pairs[0]] - edge_pair_weights[sorted_pairs[1]] >= 3:
 			pairs_to_resolve.add((e_tail, e_head))
-	
-	print '================================='
-	print 'Vertex: %d' % v.id_
-	print [(e_tail.id_, e_head.id_) for (e_tail, e_head) in pairs_to_resolve]
-	print ','.join([str(w) for w in v_wells])
-	print_true_intervals(v, v.metadata['contigs'])
-	print
-	print 'BEFORE:'
-	print 'H:'
-	for e in H:
-		w = e.other_vertex(v)
-		# wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
-		wells = ','.join([str(well) for well in get_wells(w) if well in T_wells])
-		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contig_ends'] if w.metadata['contig_ends'][ctg] > len(w) - 100])
-	print 'T:'
-	for e in T:
-		w = e.other_vertex(v)
-		# wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
-		wells = ','.join([str(well) for well in get_wells(w) if well in H_wells])
-		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contig_ends'] if w.metadata['contig_starts'][ctg] < 100])
-		# for ctg in w.metadata['contigs'][:15]:
-		# 	if w.metadata['contig_ends'][ctg] < 100:
-		# 		print_true_coordinates(w, ctg)
-	print
+
+	print '>>> RESOLVING:'
+	print_repeat(v)
 	print {(e_h.id_, e_t.id_, edge_pair_weights[(e_h, e_t)]) for e_h in H for e_t in T}
+
+	H_wells = {well for e in H for well in H_wells_map[e]}
+	T_wells = {well for e in T for well in T_wells_map[e]}
 
 	for e_tail, e_head in pairs_to_resolve:
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
@@ -226,21 +215,20 @@ def try_to_resolve(v, g, wells='edges'):
 			print 'H:'
 			for e in v.head_edges:
 				w = e.other_vertex(v)
-				wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
+				wells = ','.join([str(well) for well in H_wells_map[e] if well in T_wells])
 				print e.id_, '\t', wells
 			print 'T:'
 			for e in v.tail_edges:
 				w = e.other_vertex(v)
-				wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
+				wells = ','.join([str(well) for well in T_wells_map[e] if well in H_wells])
 				print e.id_, '\t', wells
 			print '+'
 			w = e_head.other_vertex(v_new)
-			wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
+			wells = ','.join([str(well) for well in H_wells_map[e_head] if well in T_wells])
 			print e_head.id_, '\t', wells
 			w = e_tail.other_vertex(v_new)
-			wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
+			wells = ','.join([str(well) for well in T_wells_map[e_tail] if well in H_wells])
 			print e_tail.id_, '\t', wells
-
 
 def resolve(v, e_tail, e_head, g):
 	v_new = OverlapVertex(g.vertex_id_generator.get_id(), str(v.seq))
