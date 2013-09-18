@@ -50,13 +50,13 @@ print_stats(g)
 # ##############################################################################			
 # ## CONTRACT PATHS
 
-# contract_edges(g)	
-# print_stats(g)
+contract_edges(g)	
+print_stats(g)
 
 # ##############################################################################			
 # ## DELETE SPURIOUS EDGES
 
-# delete_spurious_edges(g)
+delete_spurious_edges(g)
 # # examine_connections(g)
 
 # contract_edges(g)
@@ -64,7 +64,7 @@ print_stats(g)
 
 # # examine_misassemblies(g)
 
-# # save_graph(g, 'graph.asqg', 'graph.containment')
+# save_graph(g, 'graph.asqg', 'graph.containment')
 # # exit()
 
 
@@ -74,13 +74,16 @@ print_stats(g)
 for i in xrange(4):
 	resolve_repeats(g, wells='edges')
 
-# # contract_edges(g)
+# # # contract_edges(g)
 examine_repeats(g)
 # print_stats(g)
 
-to_graphviz_dot_with_intervals(g, 'out.dot')
+# save_graph(g, 'graph.asqg', 'graph.containment')
 
-examine_connections(g, conservative=False)
+# examine_connections(g, conservative=False)
+# delete_spurious_edges(g, conservative=False)
+
+to_graphviz_dot_with_intervals(g, 'out.dot')
 
 exit()
 

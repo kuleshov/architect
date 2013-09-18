@@ -43,7 +43,7 @@ def examine_connections(g, conservative=True):
 		I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
 		I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
 
-		if spurious_connection(e):
+		if spurious_connection(e, conservative):
 			num_spurious += 1
 
 			wrong_call = False
@@ -53,7 +53,7 @@ def examine_connections(g, conservative=True):
 						wrong_call = True
 						break
 			if wrong_call:
-				print '>>> WRONG CONNECTION:'
+				print '>>> WRONG CALL:'
 				print_connection(e)
 				wrong_calls += 1
 
@@ -74,6 +74,18 @@ def examine_connections(g, conservative=True):
 
 def spurious_connection(e, conservative=True):
 	v1, v2 = e.v1, e.v2
+
+	# temporary hack:
+	if (e.connection[v1] == 'H' and len(v1.head_edges) == 1):
+		if e.connection[v2] == 'T' and len(v2.tail_edges) == 1 \
+		or e.connection[v2] == 'H' and len(v2.head_edges) == 1:
+			print e.id_, 'path'
+			return False
+	elif (e.connection[v1] == 'T' and len(v1.tail_edges) == 1):
+		if e.connection[v2] == 'T' and len(v2.tail_edges) == 1 \
+		or e.connection[v2] == 'H' and len(v2.head_edges) == 1:
+			print e.id_, 'path'
+			return False
 
 	if e.connection[v1] == 'H':
 		v1_wells = get_head_wells(v1)
@@ -103,11 +115,20 @@ def spurious_connection(e, conservative=True):
 		else:
 			return True
 	else:
-		if v1_fraction > 0.5 or v2_fraction > 0.5 \
-		or len(v1_wells) + len(v2_wells) < 3:
-			return False
+		print e.id_, v1_fraction, v2_fraction, min(len(v1_wells), len(v2_wells))
+
+		if min(len(v1_wells), len(v2_wells)) == 1:
+			if min(v1_fraction, v2_fraction) >= 0.25 \
+			or len(v1_wells) + len(v2_wells) <= 3:				
+				return False
+			else:
+				return True
 		else:
-			return True
+			if v1_fraction >= 0.25 or v2_fraction >= 0.25 \
+			or len(v1_wells) + len(v2_wells) <= 3:				
+				return False
+			else:
+				return True
 
 def delete_spurious_edges(g, conservative=True):
 	for e in g.edges:
