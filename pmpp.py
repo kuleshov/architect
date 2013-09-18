@@ -40,10 +40,11 @@ def examine_connections(g):
 	for e in g.edges:
 		v1, v2 = e.v1, e.v2
 
+		I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+		I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
+		
 		if spurious_connection(e):
 			num_spurious += 1
-			I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
-			I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
 
 			wrong_call = False
 			for i1 in I_v1:
