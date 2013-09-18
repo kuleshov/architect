@@ -48,6 +48,45 @@ def get_true_intervals(w, ctgs):
 
 	return get_intervals(I)
 
+def get_head_intervals(w, ctgs):
+	I = list()
+	for ctg in ctgs:
+		if w.metadata['contig_starts'][ctg] != -1 and \
+		   w.metadata['contig_starts'][ctg] < 200:
+			fields = ctg.split('_')
+			chrom, coords = fields[1].split(':')
+			start, end = (int(x) for x in coords.split('-'))
+
+			# correction for how we generated the reads. bed format is 1-based
+			start -= 1
+			end -= 1
+
+			internal_start = int(fields[2])
+
+			I.append((int(chrom), start + internal_start, start + internal_start + 199))
+
+	return get_intervals(I)
+
+def get_tail_intervals(w, ctgs):
+	I = list()
+	w_len = len(w.seq)
+	for ctg in ctgs:
+		if w.metadata['contig_ends'][ctg] != -1 and \
+		   w.metadata['contig_ends'][ctg] > w_len - 200:
+			fields = ctg.split('_')
+			chrom, coords = fields[1].split(':')
+			start, end = (int(x) for x in coords.split('-'))
+
+			# correction for how we generated the reads. bed format is 1-based
+			start -= 1
+			end -= 1
+
+			internal_start = int(fields[2])
+
+			I.append((int(chrom), start + internal_start, start + internal_start + 199))
+
+	return get_intervals(I)
+
 def print_true_coordinates(w, ctg):
 	fields = ctg.split('_')
 	chrom, coords = fields[1].split(':')
@@ -269,6 +308,28 @@ def to_graphviz_dot_with_intervals(g, dot_file):
 				color = "black"
 
 			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), color))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			# if v1.id_ == 3706567 and v2.id_ == 3712515:
+			# 	visualize_connection(e)
+			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+
+		dot.write('}\n')
+
+def to_graphviz_dot_with_double_intervals(g, dot_file):
+	genome = load_genome()
+	with open(dot_file, 'w') as dot:
+		dot.write('digraph adj {\n')
+		for v in g.vertices:
+			I_head = get_head_intervals(v, v.metadata['contig_starts'].keys())
+			I_tail = get_tail_intervals(v, v.metadata['contig_ends'].keys())
+			if len(I_head) > 1 or len(I_tail) > 1:
+				color = "red"
+			else:
+				color = "black"
+
+			label = ','.join([str(i) for i in I_head]) + '|\n' + ','.join([str(i) for i in I_tail])
+			dot.write('%d [label = "%s", color="%s"]\n' % (v.id_, label, color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
 			# if v1.id_ == 3706567 and v2.id_ == 3712515:
