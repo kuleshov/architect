@@ -64,14 +64,14 @@ print_stats(g)
 
 # # examine_misassemblies(g)
 
-# save_graph(g, 'graph.asqg', 'graph.containment')
-# exit()
+# # save_graph(g, 'graph.asqg', 'graph.containment')
+# # exit()
 
 
 ##############################################################################			
 ## RESOLVE REPEATS
 
-for i in xrange(5):
+for i in xrange(4):
 	resolve_repeats(g, wells='edges')
 
 # # contract_edges(g)
@@ -79,6 +79,9 @@ examine_repeats(g)
 # print_stats(g)
 
 to_graphviz_dot_with_intervals(g, 'out.dot')
+
+examine_connections(g, conservative=False)
+
 exit()
 
 ##############################################################################			

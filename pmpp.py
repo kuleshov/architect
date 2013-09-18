@@ -34,7 +34,7 @@ def print_connection(e):
 	print 'V2 wells:', ','.join([str(w) for w in v2_wells])
 	print 'I2', I_v2
 
-def examine_connections(g):
+def examine_connections(g, conservative=True):
 	num_spurious = 0
 	wrong_calls = 0
 	for e in g.edges:
@@ -42,7 +42,7 @@ def examine_connections(g):
 
 		I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
 		I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
-		
+
 		if spurious_connection(e):
 			num_spurious += 1
 
@@ -64,13 +64,15 @@ def examine_connections(g):
 				if overlaps(i1, i2):
 					spurious = False
 
-		if spurious and not spurious_connection(e):
+		if spurious:
+			if spurious_connection(e, conservative):
+				print '>>> CALLED:'
 			print_connection(e)
 
 	print 'Called %d spurious edges' % num_spurious
 	print 'Made %d wrong calls' % wrong_calls
 
-def spurious_connection(e):
+def spurious_connection(e, conservative=True):
 	v1, v2 = e.v1, e.v2
 
 	if e.connection[v1] == 'H':
@@ -94,15 +96,22 @@ def spurious_connection(e):
 	# avg len: 26k, 9 conn. comp.
 	# IDEA: do this in several steps, b/c larger contigs -> more wells
 
-	if v1_fraction > 0.25 or v2_fraction > 0.25 \
-	or len(v1_wells) < 3 or len(v2_wells) < 3:
-		return False
+	if conservative:
+		if v1_fraction > 0.25 or v2_fraction > 0.25 \
+		or len(v1_wells) < 3 or len(v2_wells) < 3:
+			return False
+		else:
+			return True
 	else:
-		return True
+		if v1_fraction > 0.5 or v2_fraction > 0.5 \
+		or len(v1_wells) + len(v2_wells) < 3:
+			return False
+		else:
+			return True
 
-def delete_spurious_edges(g):
+def delete_spurious_edges(g, conservative=True):
 	for e in g.edges:
-		if spurious_connection(e):
+		if spurious_connection(e, conservative):
 			g.remove_edge(e)
 
 
