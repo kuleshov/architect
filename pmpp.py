@@ -125,6 +125,7 @@ def print_repeat(v):
 
 	print '================================'
 	print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+	print 'V_wells:', ','.join([str(well) for well in get_wells(v)])
 
 	T_wells = {well for e in v.tail_edges for well in wells_by_edge[e]}
 	H_wells = {well for e in v.head_edges for well in wells_by_edge[e]}
@@ -172,6 +173,8 @@ def try_to_resolve(v, g, wells='edges'):
 	v_wells = get_wells(v)
 	H_wells_map = get_wells_by_edge(v, H)
 	T_wells_map = get_wells_by_edge(v, T)
+	common_wells = [well for e in H for well in H_wells_map[e]] + \
+				   [well for e in T for well in T_wells_map[e]]
 
 	# calculate which wells occur uniquely on edges on either side
 	# i.e. H_support_map[w] = e iff e is the only edge in H that contains w
@@ -180,7 +183,8 @@ def try_to_resolve(v, g, wells='edges'):
 
 	# compute weights for the edges in the graph H <-> T
 	edge_pair_weights = {(e_head, e_tail): 0 for e_head in H for e_tail in T}
-	for well in v_wells:
+	# for well in v_wells:
+	for well in common_wells:
 		# if has_support(w, v):
 		e_head = H_support_map.get(well, None)
 		e_tail = T_support_map.get(well, None)
