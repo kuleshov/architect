@@ -43,19 +43,15 @@ def print_stats(g):
 
 CHECKPOINTDIR = 'checkpoints/working/'
 
-# g = load_graph('graph.asqg', 'graph.containment')
+# g = load_from_sga_asqg(args.asqg)
 # print_stats(g)
-
-# g = load_graph(CHECKPOINTDIR + 'graph.04.repruned.asqg', 
-# 			  CHECKPOINTDIR + 'graph.04.repruned.containment')
 
 g = load_graph(CHECKPOINTDIR + 'graph.01.contracted.asqg', 
 			  CHECKPOINTDIR + 'graph.01.contracted.containment')
 
-print_stats(g)
+examine_misassemblies(g)
 
-# g = load_from_sga_asqg(args.asqg)
-# print_stats(g)
+print_stats(g)
 
 # save_graph(g, CHECKPOINTDIR + 'graph.00.loaded.asqg', 
 # 			  CHECKPOINTDIR + 'graph.00.loaded.containment')
@@ -69,19 +65,21 @@ print_stats(g)
 # save_graph(g, CHECKPOINTDIR + 'graph.01.contracted.asqg', 
 # 			  CHECKPOINTDIR + 'graph.01.contracted.containment')
 
-# ##############################################################################			
-# ## DELETE SPURIOUS EDGES
+##############################################################################			
+## DELETE SPURIOUS EDGES
 
-# delete_spurious_edges(g)
-# # # examine_connections(g)
+examine_connections(g)
+delete_spurious_edges(g)
 
-# # contract_edges(g)
-# print_stats(g)
+# contract_edges(g)
+print_stats(g)
 
-# save_graph(g, CHECKPOINTDIR + 'graph.02.pruned.asqg', 
-# 			  CHECKPOINTDIR + 'graph.02.pruned.containment')
+save_graph(g, CHECKPOINTDIR + 'graph.02.pruned.asqg', 
+			  CHECKPOINTDIR + 'graph.02.pruned.containment')
 
-# # examine_misassemblies(g)
+# examine_misassemblies(g)
+
+exit()
 
 ##############################################################################			
 ## RESOLVE REPEATS

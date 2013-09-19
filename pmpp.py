@@ -34,7 +34,7 @@ def print_connection(e):
 	print 'V2 wells:', ','.join([str(w) for w in v2_wells])
 	print 'I2', I_v2
 
-def examine_connections(g, conservative=True):
+def examine_connections(g, conservative='very'):
 	num_spurious = 0
 	wrong_calls = 0
 	for e in g.edges:
@@ -65,17 +65,17 @@ def examine_connections(g, conservative=True):
 					spurious = False
 
 		if spurious:
-			if spurious_connection(e, conservative):
-				print '>>> CALLED:'
-			print_connection(e)
+			if not spurious_connection(e, conservative):
+				print_connection(e)
 
 	print 'Called %d spurious edges' % num_spurious
 	print 'Made %d wrong calls' % wrong_calls
 
-def spurious_connection(e, conservative=True):
+def spurious_connection(e, conservative='very'):
 	v1, v2 = e.v1, e.v2
 
 	# temporary hack:
+	# don't call spurious connections that can be contracted
 	if (e.connection[v1] == 'H' and len(v1.head_edges) == 1):
 		if e.connection[v2] == 'T' and len(v2.tail_edges) == 1 \
 		or e.connection[v2] == 'H' and len(v2.head_edges) == 1:
@@ -102,19 +102,38 @@ def spurious_connection(e, conservative=True):
 	v1_fraction = len(common_wells) / float(len(v1_wells))
 	v2_fraction = len(common_wells) / float(len(v2_wells))
 
-	# len(v1_wells) + len(v2_wells) < 3 ---> 114 calls, 10 wrong, to FN
-	# avg len: 30k (from 12k), 11 conn. comp.
-	# below ---> 96 calls, 3 wrong
-	# avg len: 26k, 9 conn. comp.
-	# IDEA: do this in several steps, b/c larger contigs -> more wells
+	if conservative == 'very':
+		# make sure this is an "extra" edge for each vertex
 
-	if conservative:
+		unbalanced_v1 = True
+		unbalanced_v2 = True
+		if e.connection[v1] == 'H':
+			if len(v1.head_edges) <= len(v1.tail_edges): unbalanced_v1 = False
+		elif e.connection[v1] == 'T':
+			if len(v1.tail_edges) <= len(v1.head_edges): unbalanced_v1 = False
+
+		if e.connection[v2] == 'H':
+			if len(v2.head_edges) <= len(v2.tail_edges): unbalanced_v2 = False
+		elif e.connection[v2] == 'T':
+			if len(v2.tail_edges) <= len(v2.head_edges): unbalanced_v2 = False
+
+		# if (not unbalanced_v2) and (not unbalanced_v1):
+		# 	return False
+
+		if v1_fraction > 0.0 or v2_fraction > 0.0 \
+		or len(v1_wells) < 4 or len(v2_wells) < 4:
+			return False
+		else:
+			return True
+
+	elif conservative == 'yes':
 		if v1_fraction > 0.25 or v2_fraction > 0.25 \
 		or len(v1_wells) < 3 or len(v2_wells) < 3:
 			return False
 		else:
 			return True
-	else:
+
+	elif conservative == 'no':
 		print e.id_, v1_fraction, v2_fraction, min(len(v1_wells), len(v2_wells))
 
 		if min(len(v1_wells), len(v2_wells)) == 1:
@@ -130,7 +149,7 @@ def spurious_connection(e, conservative=True):
 			else:
 				return True
 
-def delete_spurious_edges(g, conservative=True):
+def delete_spurious_edges(g, conservative='very'):
 	for e in g.edges:
 		if spurious_connection(e, conservative):
 			g.remove_edge(e)
