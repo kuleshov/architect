@@ -46,7 +46,8 @@ def get_true_intervals(w, ctgs):
 
 		I.append((int(chrom), start + internal_start, start + internal_start + 199))
 
-	return get_intervals(I)
+	if I:
+		return get_intervals(I)
 
 def get_head_intervals(w, ctgs):
 	I = list()
@@ -65,7 +66,10 @@ def get_head_intervals(w, ctgs):
 
 			I.append((int(chrom), start + internal_start, start + internal_start + 199))
 
-	return get_intervals(I)
+	if I:
+		return get_intervals(I)
+	else:
+		return list()
 
 def get_tail_intervals(w, ctgs):
 	I = list()
@@ -85,7 +89,10 @@ def get_tail_intervals(w, ctgs):
 
 			I.append((int(chrom), start + internal_start, start + internal_start + 199))
 
-	return get_intervals(I)
+	if I:
+		return get_intervals(I)
+	else:
+		return list()
 
 def print_true_coordinates(w, ctg):
 	fields = ctg.split('_')
@@ -328,7 +335,17 @@ def to_graphviz_dot_with_double_intervals(g, dot_file):
 			else:
 				color = "black"
 
-			label = ','.join([str(i) for i in I_head]) + '|\n' + ','.join([str(i) for i in I_tail])
+			if I_head: 
+				head_label = ','.join([str(i) for i in I_head])
+			else:
+				head_label = ''
+
+			if I_tail: 
+				tail_label = ','.join([str(i) for i in I_tail])
+			else:
+				tail_label = ''
+
+			label = head_label + '\n' + tail_label + '\n' + str(len(v))
 			dot.write('%d [label = "%s", color="%s"]\n' % (v.id_, label, color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
