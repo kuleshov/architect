@@ -128,7 +128,7 @@ def spurious_connection(e, conservative='very'):
 
 	elif conservative == 'yes':
 		if v1_fraction > 0.25 or v2_fraction > 0.25 \
-		or len(v1_wells) < 3 or len(v2_wells) < 3:
+		or len(v1_wells) < 4 or len(v2_wells) < 4:
 			return False
 		else:
 			return True
