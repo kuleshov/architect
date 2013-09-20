@@ -30,7 +30,7 @@ def count_overlaping_fragments(v, w, overlap_store):
 
 	return num_overlaping_contigs
 
-def resolve_repeats(g):
+def resolve_short_repeats(g):
 	for v in g.vertices:
 		e = overlap_decider(v, v.tail_edges)
 		if e:
@@ -55,7 +55,7 @@ def overlap_decider(v, E):
 	edge_overlaps = sorted(edge_overlaps, key=lambda x: x[1], reverse=True)
 	assert edge_overlaps[0][1] - edge_overlaps[1][1] >= 0
 
-	if edge_overlaps[0][1] - edge_overlaps[1][1] > 5000:
+	if edge_overlaps[0][1] - edge_overlaps[1][1] > 50:
 		return edge_overlaps[0][0]
 	else:
 		return None
