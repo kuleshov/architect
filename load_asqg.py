@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 import argparse
-from graph_load import load_from_sga_asqg, save_graph, load_graph
+
+from graph_load import load_from_sga_asqg, save_graph, load_graph, save_graph_to_fasta
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
 					  examine_misassemblies, to_graphviz_dot_with_double_intervals
-from graph_stats import graph_n50, graph_avg
+from graph_stats import print_stats
+from string_graph import test_break_vertex, break_contigs
 
 from contraction import contract_edges
 from pmpp import resolve_repeats, examine_repeats, delete_spurious_edges, get_well, examine_connections
 from remove_transitive import pop_triangles
+from resolve_repeats import resolve_short_repeats
 
 from libkuleshov.debug import keyboard
 
@@ -27,34 +30,38 @@ def find_read(g, id_):
 				print v.metadata['contig_starts'][ctg], get_well(ctg)
 			return v
 
-
-##############################################################################			
-## STATS
-
-def print_stats(g):
-	print "Vertices:", len(g.vertices)
-	print "Edges:", len(g.edges)
-	print "Connected components:", g.count_connected_components()
-	print "N50:", graph_n50(g)
-	print "Average contig length:", graph_avg(g)
-
 ##############################################################################			
 ## LOAD
 
 CHECKPOINTDIR = 'checkpoints/working/'
+# CHECKPOINTDIR = 'checkpoints/130916/130916'
 
 # g = load_from_sga_asqg(args.asqg)
-# print_stats(g)
 
-g = load_graph(CHECKPOINTDIR + 'graph.01.contracted.asqg', 
-			  CHECKPOINTDIR + 'graph.01.contracted.containment')
+g = load_graph('../rerun_sga/reads.pre_simplify', 
+			   'graph.containment')
 
-examine_misassemblies(g)
+# g = load_graph(CHECKPOINTDIR + 'graph.04.repruned.asqg', 
+			  # CHECKPOINTDIR + 'graph.04.repruned.containment')
+
+print_stats(g)
+to_graphviz_dot_with_intervals(g, 'out.dot')
+exit()
+
+# contract_edges(g)
+# break_contigs(g)
+# to_graphviz_dot_with_double_intervals(g, 'out.dot')
+# save_graph_to_fasta(g, 'graph.fasta', 'graph.containment')
+# exit()
+# contract_edges(g)
+# examine_misassemblies(g)
 
 print_stats(g)
 
-# save_graph(g, CHECKPOINTDIR + 'graph.00.loaded.asqg', 
-# 			  CHECKPOINTDIR + 'graph.00.loaded.containment')
+save_graph(g, CHECKPOINTDIR + 'graph.00.loaded.asqg', 
+			  CHECKPOINTDIR + 'graph.00.loaded.containment')
+
+exit()
 
 # ##############################################################################			
 # ## CONTRACT PATHS
@@ -65,21 +72,26 @@ print_stats(g)
 # save_graph(g, CHECKPOINTDIR + 'graph.01.contracted.asqg', 
 # 			  CHECKPOINTDIR + 'graph.01.contracted.containment')
 
-##############################################################################			
-## DELETE SPURIOUS EDGES
+# ##############################################################################			
+# ## DELETE SPURIOUS EDGES
 
-examine_connections(g)
-delete_spurious_edges(g)
+# # for i in xrange(4):
+# # 	examine_connections(g, conservative='very')
+# # 	delete_spurious_edges(g, conservative='very')
+# # 	contract_edges(g)
 
-# contract_edges(g)
-print_stats(g)
+# for i in xrange(2):
+# 	examine_connections(g, conservative='yes')
+# 	delete_spurious_edges(g, conservative='yes')
 
-save_graph(g, CHECKPOINTDIR + 'graph.02.pruned.asqg', 
-			  CHECKPOINTDIR + 'graph.02.pruned.containment')
+# # contract_edges(g)
+# print_stats(g)
+# to_graphviz_dot_with_intervals(g, 'out.dot')
 
-# examine_misassemblies(g)
+# # save_graph(g, CHECKPOINTDIR + 'graph.04.repruned.asqg', 
+# # 			  CHECKPOINTDIR + 'graph.04.repruned.containment')
 
-exit()
+# # examine_misassemblies(g)
 
 ##############################################################################			
 ## RESOLVE REPEATS
@@ -87,14 +99,19 @@ exit()
 # for i in xrange(4):
 # 	resolve_repeats(g, wells='edges')
 
-# # # # contract_edges(g)
+resolve_short_repeats(g)
+# resolve_repeats(g)
 # examine_repeats(g)
-# print_stats(g)
+print_stats(g)
 
-# save_graph(g, CHECKPOINTDIR + 'graph.03.resolved.asqg', 
-# 			  CHECKPOINTDIR + 'graph.03.resolved.containment')
+to_graphviz_dot_with_intervals(g, 'out.dot')
 
-# # save_graph(g, 'graph.asqg', 'graph.containment')
+save_graph(g, CHECKPOINTDIR + 'graph.05.resolved.asqg', 
+			  CHECKPOINTDIR + 'graph.05.resolved.containment')
+
+exit()
+
+# save_graph(g, 'graph.asqg', 'graph.containment')
 
 # # examine_connections(g, conservative=False)
 # delete_spurious_edges(g, conservative=False)
@@ -170,3 +187,4 @@ to_graphviz_dot_with_intervals(g, 'out.dot')
 # overlap_store = load_overlap_store(args.all_asqg)
 
 # examine_repeats(g, overlap_store)
+

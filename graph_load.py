@@ -236,7 +236,10 @@ def load_containment(g, containment_file):
 	with open(containment_file) as in_:
 		for line in in_:
 			fields = line.split()
-			v = g.vertices_by_id[int(fields[0])]
+			v = g.vertices_by_id.get(int(fields[0]), None)
+			if not v:
+				print 'WARNING: Vertex not found:', int(fields[0])
+				continue
 			ctg = fields[1]
 
 			if 'contigs' not in v.metadata:
@@ -251,6 +254,16 @@ def load_containment(g, containment_file):
 
 def save_graph(g, asqg_file, containment_file):
 	write_asqg(g, asqg_file)
+	write_containment(g, containment_file)
+
+def write_fasta(g, fasta_file):
+	with open(fasta_file, 'w') as fasta:
+		for v in g.vertices:
+			fasta.write('>' + str(v.id_) + '\n')
+			fasta.write(v.seq + '\n')
+
+def save_graph_to_fasta(g, fasta_file, containment_file):
+	write_fasta(g, fasta_file)
 	write_containment(g, containment_file)
 
 def write_asqg(g, asqg_file):
