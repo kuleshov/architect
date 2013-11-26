@@ -1,4 +1,5 @@
 import os
+import sys
 
 from intervals import get_intervals
 from libkuleshov.dna import reverse_complement
@@ -298,7 +299,7 @@ def to_graphviz_dot(g, dot_file):
 
 		dot.write('}\n')
 
-def to_graphviz_dot_with_intervals(g, dot_file):
+def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 	genome = load_genome()
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
