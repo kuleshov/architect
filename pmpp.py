@@ -88,6 +88,71 @@ def spurious_connection(e, conservative='very'):
 			else:
 				return True
 
+def get_neighborhood(g, v, e):
+	"""Returns all nodes that overlap with v and have a path through e."""
+	
+	# get other vertex
+	w = e.other_vertex(v)
+
+	# get part of w that overlaps with v:
+	ovl = e.ovl_start[w], e.ovl_end[w]
+
+	# get nodes that overlap with w using BFS
+	visited = set([v, w])
+	neighborhood = set([w])
+	N_w, visited = visit_neighborhood(g, w, visited, ovl)
+
+	neighborhood.update(N_w)
+	return neighborhood
+
+def visit_neighborhood(g, v, visited, ovl):
+	"""Returns nodes that overlap with v at ovl.
+
+	Performs a BFS starting at v.
+	"""
+	N = set()
+	to_visit = list()
+	# check if the neighbors of v intersect it at the desired overlap
+	for e in v.edges:
+		n = e.other_vertex(v)
+
+		# skip visited vertices
+		if n in visited:
+			continue
+		else:
+			visited.add(n)
+
+		# intersect ovl with overlap of n in v
+		nv_ovl = e.ovl_start[v], e.ovl_end[v]
+
+		if nv_ovl[0] <= ovl[0] <= nv_ovl[1]:
+			common_ovl = (ovl[0], min(nv_ovl[1], ovl[1]))
+		elif nv_ovl[0] <= ovl[1] <= nv_ovl[1]:
+			common_ovl = (max(nv_ovl[0], ovl[0]), ovl[1])
+		else:
+			continue
+
+		# if we are still here, the is a common overlap
+
+		# add to set of neighbors:
+		N.add(n)
+
+		# determine the coordinates of common_ovl in n:
+		start_shift = common_ovl[0] - nv_ovl[0]
+		end_shift = nv_ovl[1] - common_ovl[1]
+		shifted_ovl_in_n = e.ovl_start[n] + start_shift, e.ovl_end[n] - end_shift
+
+		# mark this node to be visited later:
+		to_visit.append((n, shifted_ovl_in_n))
+
+	# now, visit all neighbors recusively:
+	for n, n_ovl in to_visit:
+		N_n, visited = visit_neighborhood(g, n, visited, n_ovl)
+		N.update(N_n)
+			
+	# return all neighbors found and all nodes visited
+	return N, visited
+
 # -----------------------------------------------------------------------------
 # repeat resolution
 
