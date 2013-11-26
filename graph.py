@@ -22,6 +22,9 @@ class Graph(object):
 	def edges(self):
 		return self.edges_by_id.values()
 
+	def get_edge(self, id_):
+		return self.edges_by_id[id_]
+
 	def add_vertex(self, v):
 		self.vertices_by_id[v.id_] = v
 
@@ -80,6 +83,26 @@ class Vertex(object):
 	## get_neighbors abstract method
 
 	## disconnect edge_abstract method
+
+	## method for dealing with wells
+
+	def get_wells(self):
+		return {Vertex.get_well(ctg) for ctg in self.metadata['contigs']}
+
+	def get_head_wells(self):
+		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_starts']
+				if self.metadata['contig_starts'][ctg] < 500}
+
+	def get_tail_wells(self):
+		len_v = len(self)
+		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_ends']
+				if self.metadata['contig_ends'][ctg] > len_v - 500}
+
+	@staticmethod
+	def get_well(ctg):
+		assert ctg.startswith('well')
+		fields = ctg.split('_')
+		return fields[0][4:]
 
 class Edge(object):
 	def __init__(self, id_, v1, v2):

@@ -1,9 +1,13 @@
 import os
 import sys
 
-from intervals import get_intervals
+from intervals import print_true_intervals, get_true_intervals, get_head_intervals, get_tail_intervals
 from libkuleshov.dna import reverse_complement
 
+###############################################################################
+## PRINT INFORMATION FOR A VERTEX, EDGE
+
+# this probably was moved here and never tested: get_tail_wells is not imported
 def print_vertex(x):
 	print '================================='
 	print 'Vertex: %d' % v.id_
@@ -15,13 +19,13 @@ def print_vertex(x):
 	print 'H:'
 	for e in H:
 		w = e.other_vertex(v)
-		wells = ','.join([str(well) for well in get_tail_wells(w) if well in T_wells])
+		wells = ','.join([str(well) for well in w.get_tail_wells() if well in T_wells])
 		print e.id_, '\t', wells
 		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_ends'][ctg] > len(w) - 1000])
 	print 'T:'
 	for e in T:
 		w = e.other_vertex(v)
-		wells = ','.join([str(well) for well in get_head_wells(w) if well in H_wells])
+		wells = ','.join([str(well) for well in w.get_head_wells() if well in H_wells])
 		print e.id_, '\t', wells
 		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_starts'][ctg] < 1000])
 		# for ctg in w.metadata['contigs'][:15]:
@@ -29,225 +33,58 @@ def print_vertex(x):
 		# 		print_true_coordinates(w, ctg)
 	print
 
-###############################################################################
-## DETERMINE THE TRUE REFERENCE SEQUENCES THAT ARE CONTAINED IN A CONTIG
+def print_connection(e):
+	v1, v2 = e.v1, e.v2
 
-def get_true_intervals(w, ctgs):
-	I = list()
-	for ctg in ctgs:
-		fields = ctg.split('_')
-		chrom, coords = fields[1].split(':')
-		start, end = (int(x) for x in coords.split('-'))
+	if e.connection[v1] == 'H':
+		v1_wells = v1.get_head_wells()
+	elif e.connection[v1] == 'T':
+		v1_wells = v1.get_tail_wells()
+	if e.connection[v2] == 'H':
+		v2_wells = v2.get_head_wells()
+	elif e.connection[v2] == 'T':
+		v2_wells = v2.get_tail_wells()
+	# v1_wells = get_wells(v1)
+	# v2_wells = get_wells(v2)
 
-		# correction for how we generated the reads. bed format is 1-based
-		start -= 1
-		end -= 1
+	I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
+	I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
 
-		internal_start = int(fields[2])
+	print '================================'
+	print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
+	% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
+			  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
+			  e.v2_orientation)
+	print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
+	print 'V1 wells:', ','.join([str(w) for w in v1_wells])
+	print 'I1', I_v1
+	print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
+	print 'V2 wells:', ','.join([str(w) for w in v2_wells])
+	print 'I2', I_v2
 
-		I.append((int(chrom), start + internal_start, start + internal_start + 199))
+def print_repeat(v, wells_by_edge):
+	print '================================'
+	print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+	print 'V_wells:', ','.join([str(well) for well in v.get_wells()])
 
-	if I:
-		return get_intervals(I)
+	T_wells = {well for e in v.tail_edges for well in wells_by_edge[e]}
+	H_wells = {well for e in v.head_edges for well in wells_by_edge[e]}
 
-def get_head_intervals(w, ctgs):
-	I = list()
-	for ctg in ctgs:
-		if w.metadata['contig_starts'][ctg] != -1 and \
-		   w.metadata['contig_starts'][ctg] < 200:
-			fields = ctg.split('_')
-			chrom, coords = fields[1].split(':')
-			start, end = (int(x) for x in coords.split('-'))
+	for e in v.tail_edges:
+		w = e.other_vertex(v)
+		wells = ','.join([str(well) for well in wells_by_edge[e] if well in H_wells])
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
 
-			# correction for how we generated the reads. bed format is 1-based
-			start -= 1
-			end -= 1
+	print '-------------------------------'
 
-			internal_start = int(fields[2])
+	for e in v.head_edges:
+		w = e.other_vertex(v)
+		wells = ','.join([str(well) for well in wells_by_edge[e] if well in T_wells])
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
 
-			I.append((int(chrom), start + internal_start, start + internal_start + 199))
-
-	if I:
-		return get_intervals(I)
-	else:
-		return list()
-
-def get_tail_intervals(w, ctgs):
-	I = list()
-	w_len = len(w.seq)
-	for ctg in ctgs:
-		if w.metadata['contig_ends'][ctg] != -1 and \
-		   w.metadata['contig_ends'][ctg] > w_len - 200:
-			fields = ctg.split('_')
-			chrom, coords = fields[1].split(':')
-			start, end = (int(x) for x in coords.split('-'))
-
-			# correction for how we generated the reads. bed format is 1-based
-			start -= 1
-			end -= 1
-
-			internal_start = int(fields[2])
-
-			I.append((int(chrom), start + internal_start, start + internal_start + 199))
-
-	if I:
-		return get_intervals(I)
-	else:
-		return list()
-
-def print_true_coordinates(w, ctg):
-	fields = ctg.split('_')
-	chrom, coords = fields[1].split(':')
-	start, end = (int(x) for x in coords.split('-'))
-
-	# correction for how we generated the reads. bed format is 1-based
-	start -= 1
-	end -= 1
-
-	internal_start = int(fields[2])
-
-	print chrom, start + internal_start, start + internal_start + 199
-
-def print_true_intervals(w, ctgs):
-	I = list()
-	for ctg in ctgs:
-		fields = ctg.split('_')
-		chrom, coords = fields[1].split(':')
-		start, end = (int(x) for x in coords.split('-'))
-		
-		# correction for how we generated the reads. bed format is 1-based
-		start -= 1
-		end -= 1
-
-		internal_start = int(fields[2])
-		I.append((int(chrom), start + internal_start, start + internal_start + 199))
-
-	merged_I = get_intervals(I)
-	for i in merged_I:
-		print '\t', i
-
-###############################################################################
-## EXAMINE POTENTIAL MISSASEMBLIES
-
-def load_genome():
-	GENOME_PATH="/home/kuleshov/metagenomica/simulate/rs/simulate_short_reads/renamed.ref"
-	FASTX_PATH="/home/kuleshov/lib/fastx"
-
-	genome = dict()
-	with os.popen('cat %s | %s/fasta_formatter' % (GENOME_PATH, FASTX_PATH)) as genome_file:
-		current_ctg = ""
-		for line in genome_file:
-			line.strip()
-			if line.startswith('>'):
-				current_ctg = int(line[1:])
-			else:
-				assert current_ctg and current_ctg not in genome
-				genome[current_ctg] = line
-
-	return genome
-
-def common_overlap(i1, i2):
-	""" Find the common overlap of i1, i2. """
-	# NOTE: Doesn't work b/c we don't consider rev. compl.
-
-	# i2 -> i1?
-	for i1_start_in_i2 in xrange(len(i2)):
-		# l = len(i2) - i1_start_in_i2
-		l = len(i2[i1_start_in_i2:])
-		if i2[i1_start_in_i2:] == i1[:l]:
-			return i1[:l]
-
-	# i1 -> i2?
-	for i2_start_in_i1 in xrange(len(i1)):
-		# l = len(i1) - i2_start_in_i1
-		l = len(i1[i2_start_in_i1:])
-		if i1[i2_start_in_i1:] == i2[:l]:
-			return i2[:l]
-
-def get_containments(v, true_intervals, genome):
-	"""
-	Returns a list of that descripbes how true_intervals are contained 
-	in the assembled sequence of v.
-	A containment is a tuple (start_pos, end_pos, orientation).
-	"""
-	containments = list()
-	assembly = v.seq
-	for i in true_intervals:
-		# print i, i[2]-i[1]+1,
-		true_region = genome[i[0]][i[1]:i[2]+1]
-
-		# try same strand:
-		for j in xrange(len(assembly)):
-			if true_region == assembly[j:j+len(true_region)]:
-				containments.append((j, j+len(true_region)-1, 0))
-				break
-
-		# try opposite strands:
-		true_region_opp = reverse_complement(true_region)
-		for j in xrange(len(assembly)):
-			if true_region_opp == assembly[j:j+len(true_region_opp)]:
-				containments.append((j, j+len(true_region_opp)-1, 1))
-				break
-
-		# containments.append((-1, -1, -1))
-
-	return containments
-
-def print_containment(v, true_intervals, genome):
-	# if len(v.seq) > 250: return
-	print '-----------------------------------------------------------'
-	print 'ASSEMBLY:', v.id_, len(v.seq)
-	# print v.seq
-	print 'VERIFYING INTERVALS:', ', '.join([str(i) for i in true_intervals])
-
-	containments = get_containments(v, true_intervals, genome)
-	for c, intv in zip(containments, true_intervals):
-		print intv, intv[2]-intv[1]+1, c
-
-def examine_repeats(intervals, genome):
-	print '-----------------------------------------------------------'
-	print 'VERIFYING INTERVALS:', ', '.join([str(i) for i in intervals])
-	for i in intervals:
-		print i, i[2] - i[1] + 1
-
-		# if i[2] - i[1] < 100:
-		# 	print genome[i[0]][i[1]:i[2]+1]
-		# else:
-		# 	print
-
-	if len(intervals) == 2:
-		a = intervals[0]
-		b = intervals[1]
-		# need to consider rev. compl. in this function:
-		o = common_overlap(genome[a[0]][a[1]:a[2]+1], genome[b[0]][b[1]:b[2]+1])
-		if o:
-			print o
-		else:
-			print "overlap not found"
-
-def is_misassembly(v, true_intervals, genome):
-	"""
-	If a true genomic region does not touch the 200bp-long edges of a contig,
-	we consider that it is a misassembly.
-	"""
-	L = len(v.seq)
-	containments = get_containments(v, true_intervals, genome)
-	for c, intv in zip(containments, true_intervals):
-		if c[0] > 200 or c[1] < L - 200:
-			return True
-
-	return False
-
-def examine_misassemblies(g):
-	genome = load_genome()
-	for v in g.vertices:
-		I = get_true_intervals(v, v.metadata['contigs'])
-		# if v.id_== 3599553:
-		# 	visualize_assembly(v, I, genome)
-		if len(I) > 1:
-			# examine_repeats(I, genome)
-			if is_misassembly(v, I, genome):
-				print_containment(v, I, genome)
+	print
 
 ###############################################################################
 ## VISUALIZE SUB-COMPONENTS OF THE GRAPH
@@ -300,7 +137,7 @@ def to_graphviz_dot(g, dot_file):
 		dot.write('}\n')
 
 def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
-	genome = load_genome()
+	# genome = load_genome()
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
 		for v in g.vertices:
@@ -320,12 +157,11 @@ def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 			v1, v2 = e.v1, e.v2
 			# if v1.id_ == 3706567 and v2.id_ == 3712515:
 			# 	visualize_connection(e)
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 
 def to_graphviz_dot_with_double_intervals(g, dot_file):
-	genome = load_genome()
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
 		for v in g.vertices:

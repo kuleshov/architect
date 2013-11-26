@@ -1,15 +1,35 @@
 #!/usr/bin/env python
 import argparse
 
+# get graph from SGA's asqg; then load/store from internal asqg-like format
 from graph_load import load_from_sga_asqg, save_graph, load_graph
+
+# save file in dot format
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
-         examine_misassemblies, to_graphviz_dot_with_double_intervals
+         			  to_graphviz_dot_with_double_intervals
+
+# visualize parts of assembly graph
+from visualize import print_connection
+
+# examine misassemblies
+from misassemblies import examine_misassemblies
+
+# collect statistics about the graph
 from graph_stats import print_stats
 
+# contract edges that are similar
 from contraction import contract_edges
-from pmpp import resolve_repeats, examine_repeats, delete_spurious_edges, \
-				 examine_connections
+
+# graph simplification operation that involve counting wells (PMMP)
+from pmpp import resolve_repeats, delete_spurious_edges
+
+# method to verify graph correctness
+from verificator import examine_repeats, examine_connections
+
+# remove some transitive edges
 from remove_transitive import pop_triangles
+
+# resolve short repeats in the graph by using lengths
 from resolve_repeats import resolve_short_repeats
 
 from libkuleshov.debug import keyboard
@@ -83,6 +103,16 @@ def main():
 	remove_transitive_parser.add_argument('--stats')
 	remove_transitive_parser.add_argument('--masm', action='store_true')
 
+	## VIEW STATISTICS
+
+	view_parser = subparsers.add_parser('view')
+	view_parser.set_defaults(func=view)
+
+	view_parser.add_argument('--inp', required=True)
+	view_parser.add_argument('--edge', type=int)
+	view_parser.add_argument('--vertex', type=int)
+	view_parser.add_argument('--dot')
+
 	args = parser.parse_args()
 	args.func(args)
 
@@ -154,6 +184,14 @@ def remove_transitive(args):
 	save_graph(g, args.out + '.asqg', 
         		  args.out + '.containment')
 
+def view(args):
+	g = load_graph(args.inp + '.asqg', 
+        	       args.inp + '.containment')
+
+	if args.edge:
+		print_connection(g.get_edge(args.edge))
+	elif args.dot:
+		to_graphviz_dot_with_intervals(g, args.dot)
 
 ###############################################################################
 ## HELPERS
