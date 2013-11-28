@@ -65,6 +65,7 @@ def print_connection(e):
 def print_repeat(v, wells_by_edge):
 	print '================================'
 	print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+	print_true_intervals(v, v.metadata['contigs'])
 	print 'V_wells:', ','.join([str(well) for well in v.get_wells()])
 
 	T_wells = {well for e in v.tail_edges for well in wells_by_edge[e]}
@@ -158,6 +159,43 @@ def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 			# if v1.id_ == 3706567 and v2.id_ == 3712515:
 			# 	visualize_connection(e)
 			dot.write('"%d" -> "%d" [label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+
+		dot.write('}\n')
+
+def to_graphviz_dot_with_connections(g, resolver, dot_file=sys.stdout):
+	# figure out which color to use for which edge
+	COLORS = ['red', 'blue', 'green', 'cyan', 'yellow', 'magenta', 'purple', 'pink', 'chocolate']
+	color_map = dict()
+	for v in g.vertices:
+		i = 0
+		pairs_to_resolve = resolver(v, g)
+		print v.id_, len(pairs_to_resolve)
+		for e_h, e_t in pairs_to_resolve:
+			if v.id_ == 3754668:
+				print e_h.id_, e_t.id_
+			if e_h not in color_map:
+				color_map[e_h] = list()
+			if e_t not in color_map:
+				color_map[e_t] = list()
+
+			color_map[e_h].append(COLORS[i])
+			color_map[e_t].append(COLORS[i])
+			i += 1
+
+	# print the graph
+	with open(dot_file, 'w') as dot:
+		dot.write('digraph adj {\n')
+		for v in g.vertices:
+			I = get_true_intervals(v, v.metadata['contigs'])
+			if len(I) > 1:
+				color = "red"
+			else:
+				color = "black"
+
+			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), color))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, ':'.join(color_map.get(e, ['black'])), e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 

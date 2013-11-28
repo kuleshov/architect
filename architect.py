@@ -6,10 +6,11 @@ from graph_load import load_from_sga_asqg, save_graph, load_graph
 
 # save file in dot format
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
-         			  to_graphviz_dot_with_double_intervals
+         			  to_graphviz_dot_with_double_intervals, \
+         			  to_graphviz_dot_with_connections
 
 # visualize parts of assembly graph
-from visualize import print_connection
+from visualize import print_connection, print_repeat
 
 # examine misassemblies
 from misassemblies import examine_misassemblies
@@ -21,7 +22,8 @@ from graph_stats import print_stats
 from contraction import contract_edges
 
 # graph simplification operation that involve counting wells (PMMP)
-from pmpp import resolve_repeats, delete_spurious_edges
+from pmpp import resolve_repeats, delete_spurious_edges, get_wells_by_edge, \
+				 try_to_resolve_new
 
 # method to verify graph correctness
 from verificator import examine_repeats, examine_connections
@@ -147,6 +149,7 @@ def spurious(args):
 
 	examine_connections(g, conservative='yes')
 	delete_spurious_edges(g, conservative='yes')
+	contract_edges(g)
 
 	save_optional_output(g, args)
 	examine_misassemblies(g)
@@ -168,7 +171,9 @@ def repeats(args):
 	g = load_graph(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
-	resolve_repeats(g)
+	V_odd = [v for v in g.vertices if len(v.edges) % 2 == 1]
+	resolve_repeats(g, V_odd)
+	resolve_repeats(g, g.vertices)
 	examine_repeats(g)
 	save_optional_output(g, args)
 
@@ -191,7 +196,16 @@ def view(args):
 	if args.edge:
 		print_connection(g.get_edge(args.edge))
 	elif args.dot:
-		to_graphviz_dot_with_intervals(g, args.dot)
+		to_graphviz_dot_with_connections(g, try_to_resolve_new, args.dot)
+
+	# for v in g.vertices:
+	# 	if len(v.edges) > 1 and (len(v.edges) % 2) == 1:
+	# 		wells_by_edge = get_wells_by_edge(v, v.edges)
+	# 		print_repeat(v, wells_by_edge)
+
+	v = g.vertices_by_id[3754668]
+	wells_by_edge = get_wells_by_edge(v, v.edges)
+	print_repeat(v, wells_by_edge)
 
 ###############################################################################
 ## HELPERS

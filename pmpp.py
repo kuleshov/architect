@@ -156,10 +156,35 @@ def visit_neighborhood(g, v, visited, ovl):
 # -----------------------------------------------------------------------------
 # repeat resolution
 
-def resolve_repeats(g, wells='edges'):
-	for v in g.vertices:
+def resolve_repeats(g, V, wells='edges'):
+	for v in V:
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
-			try_to_resolve(v, g, wells=wells)
+			# pairs_to_resolve = try_to_resolve(v, g, wells=wells)
+			# resolve_pairs(g, v, pairs_to_resolve)
+			H_to_T = try_to_resolve_new(v, g)
+			resolve_pairs_new(g, v, pairs_to_resolve)
+
+def try_to_resolve_new(v, g):
+	"""Function to match wells to each other."""
+	# H = {e.other_vertex(v) for e in v.head_edges if e.v1 != e.v2}
+	# T = {e.other_vertex(v) for e in v.tail_edges if e.v1 != e.v2}
+	H = {e for e in v.head_edges if e.v1 != e.v2}
+	T = {e for e in v.tail_edges if e.v1 != e.v2}
+
+	# place the wells of neighbouring vertices into a dict, such that
+	# H_wells_map = {v: v.get_wells() for v in H}
+	# T_wells_map = {v: v.get_wells() for v in H}
+	H_wells_map = get_wells_by_edge(v, H)
+	T_wells_map = get_wells_by_edge(v, T)
+
+	pairs_to_resolve = set()
+	for e_h in H_wells_map:
+		for e_t in T_wells_map:
+			# if they have >=3 wells in common, connect them:
+			if len(H_wells_map[e_h] & T_wells_map[e_t]) >= 4:
+				pairs_to_resolve.add((e_h, e_t))
+
+	return pairs_to_resolve
 
 def try_to_resolve(v, g, wells='edges'):
 	H = {e for e in v.head_edges if e.v1 != e.v2}
@@ -182,7 +207,7 @@ def try_to_resolve(v, g, wells='edges'):
 	edge_pair_weights = {(e_head, e_tail): 0 for e_head in H for e_tail in T}
 	# for well in v_wells:
 	for well in common_wells:
-		# if has_support(w, v):
+		# if has_support(well, v):
 		e_head = H_support_map.get(well, None)
 		e_tail = T_support_map.get(well, None)
 		if e_head and e_tail:
@@ -199,7 +224,8 @@ def try_to_resolve(v, g, wells='edges'):
 
 		if sorted_pairs[0] != edge_pair: continue
 		if len(sorted_pairs) == 1 \
-		or edge_pair_weights[sorted_pairs[0]] - edge_pair_weights[sorted_pairs[1]] >= 3:
+		or (edge_pair_weights[sorted_pairs[0]] - edge_pair_weights[sorted_pairs[1]] >= 3):
+			# and edge_pair_weights[sorted_pairs[1]] <= 3):
 			pairs_to_resolve.add((e_tail, e_head))
 
 	print '>>> RESOLVING:'
@@ -282,12 +308,17 @@ def has_support(w, v):
 	# head_ctgs = [ctg in v.metadata['contigs'] if v.metadata['contig_starts'][ctg] < 2000]
 	# tail_ctgs = [ctg in v.metadata['contigs'] if v.metadata['contig_starts'][ctg] > len(v) - 2000]
 	# wells = {get_well(ctg) for ctg in head_ctgs} | {get_well(ctg) for ctg in tail_ctgs}
+
+	def get_well(ctg):
+		assert ctg.startswith('well')
+		fields = ctg.split('_')
+		return fields[0][4:]
 	
 	well_counts = dict()
 	for ctg in v.metadata['contigs']:
 		well = get_well(ctg)
 		if well not in well_counts:
 			well_counts[well] = 0
-		well_counts += 1
+		well_counts[well] += 1
 
-	return well_counts[w] >= 1
+	return w in well_counts

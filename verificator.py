@@ -16,13 +16,14 @@ def examine_connections(g, conservative='very'):
 			num_spurious += 1
 			if valid:
 				# false positive
-				print '>>> WRONG CALL:'
+				print '>>> WRONG CALL (FALSE POSITIVE):'
 				print_connection(e)
 				wrong_calls += 1
 
-		# false negative
-		if not valid and not spurious:
-			print_connection(e)
+		# # false negative
+		# if not valid and not spurious:
+		# 	print '>>> NOT DETECTED (FALSE NEGATIVE):
+		# 	print_connection(e)
 
 	print 'Called %d spurious edges' % num_spurious
 	print 'Made %d wrong calls' % wrong_calls
