@@ -143,15 +143,11 @@ def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 		dot.write('digraph adj {\n')
 		for v in g.vertices:
 			I = get_true_intervals(v, v.metadata['contigs'])
-			# if v.id_== 3599553:
-			# 	visualize_assembly(v, I, genome)
+			color = "black"
 			if len(I) > 1:
 				color = "red"
-				# examine_repeats(I, genome)
-				# if is_misassembly(v, I, genome):
-					# print_containment(v, I, genome)
-			else:
-				color = "black"
+			if v.id_ == 3764187:
+				color = "green"
 
 			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), color))
 		for e in g.edges:

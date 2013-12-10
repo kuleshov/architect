@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import argparse
 
 # get graph from SGA's asqg; then load/store from internal asqg-like format
@@ -35,6 +36,7 @@ from remove_transitive import pop_triangles
 from resolve_repeats import resolve_short_repeats
 
 from libkuleshov.debug import keyboard
+from intervals import print_true_intervals
 
 ##############################################################################
 
@@ -172,10 +174,44 @@ def repeats(args):
         	       args.inp + '.containment')
 
 	V_odd = [v for v in g.vertices if len(v.edges) % 2 == 1]
+
+	# for v in V_odd:
+	# 	for n in v.neighbors:
+	# 		c = 0
+	# 		for e in n.edges:
+	# 			if e.other_vertex(n) == v:
+	# 				c += 1
+	# 				if c == 2:
+	# 					raise Exception("whoah!")
+
+	# for v in V_odd:
+	# 	if v.prefix_neighbors & v.suffix_neighbors:
+	# 		print >> sys.stderr, v.id_, [w.id_ for w in v.prefix_neighbors], [w.id_ for w in v.suffix_neighbors]
+	# 		print v.id_
+	# 		print_true_intervals(v, [ctg for ctg in v.metadata['contigs']])
+	# 		for w in v.prefix_neighbors:
+	# 			print w.id_
+	# 			print_true_intervals(w, [ctg for ctg in w.metadata['contigs']])
+	# 		for w in v.suffix_neighbors:
+	# 			print w.id_
+	# 			print_true_intervals(w, [ctg for ctg in w.metadata['contigs']])
+	# 		raise Exception("huh?")
+
 	resolve_repeats(g, V_odd)
-	resolve_repeats(g, g.vertices)
+	contract_edges(g)
+	# resolve_repeats(g, V_odd)
+
+	V_even = [v for v in g.vertices if len(v.edges) % 2 == 0]
+
+	# for v in V_even:
+	# 	if v.id_ == 3762621:
+	# 		print_true_intervals(v, [ctg for ctg in v.metadata['contigs']])
+	# 		# keyboard()
+
+	# resolve_repeats(g, V_even)
+	to_graphviz_dot_with_connections(g, try_to_resolve_new, args.dot)
 	examine_repeats(g)
-	save_optional_output(g, args)
+	# save_optional_output(g, args)
 
 	save_graph(g, args.out + '.asqg', 
         		  args.out + '.containment')

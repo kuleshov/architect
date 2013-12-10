@@ -120,8 +120,8 @@ def contract_edge(g, e):
 	orientation = e.v2_orientation
 
 	# remove vertices and edge
-	g.remove_vertex(v1)
-	g.remove_vertex(v2)
+	g.remove_vertex_from_index(v1)
+	g.remove_vertex_from_index(v2)
 	g.remove_edge(e)
 
 	# build new vertex

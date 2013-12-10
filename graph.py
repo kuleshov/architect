@@ -1,3 +1,5 @@
+import sys
+
 from libkuleshov.debug import keyboard
 
 ###############################################################################
@@ -29,11 +31,15 @@ class Graph(object):
 		self.vertices_by_id[v.id_] = v
 
 	def remove_vertex(self, v):
+		print >> sys.stderr, 'xx', v.id_
 		for e in v.head_edges:
-			g.remove(e)
-		for e in v.tail_ddges:
-			g.remove(e)
+			self.remove(e)
+		for e in v.tail_edges:
+			self.remove(e)
 
+		self.vertices_by_id.pop(v.id_)
+
+	def remove_vertex_from_index(self, v):
 		self.vertices_by_id.pop(v.id_)
 
 	def add_edge(self, e):
@@ -46,8 +52,14 @@ class Graph(object):
 		v1.disconnect_edge(e)
 		v2.disconnect_edge(e)
 
-	def remove_vertex(self, v):
-		self.vertices_by_id.pop(v.id_)
+		# if v in v1.neighbors:
+		# 	e2 = '...', v1.edge_to_vertex(v)
+		# 	print v1.id_, e2.id_, e.id_
+		# if v in v2.neighbors:
+		# 	e2 = v2.edge_to_vertex(v)
+		# 	print '...', v2.id_, e2.id_, e.id_
+		# assert v not in v1.neighbors
+		# assert v not in v2.neighbors
 
 	def count_connected_components(self):
 		to_visit = set(self.vertices)
@@ -120,7 +132,7 @@ class Edge(object):
 		elif v == self.v2:
 			return self.v1
 		else:
-			exit("ERROR: Vertex not found")
+			raise Exception("ERROR: Vertex %d not found in v.other_vertex" % v.id_)
 
 	def __hash__(self):
 		return hash(self.id_)

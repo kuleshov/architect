@@ -1,11 +1,11 @@
+import sys
+
 from bisect import bisect_left, bisect_right
 from graph import Vertex, Edge, Graph
 
 from libkuleshov.misc import reverse_string
 from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
-
-## call it string graph!
 
 class OverlapVertex(Vertex):
 	def __init__(self, id_, seq):
@@ -22,6 +22,20 @@ class OverlapVertex(Vertex):
 	@property
 	def edges(self):
 		return self.head_edges | self.tail_edges
+
+	def edge_to_vertex(self, v, direction='none'):
+		if direction == 'head':
+			E = self.head_edges
+		elif direction == 'tail':
+			E = self.tail_edges
+		else:
+			E = self.edges
+
+		for e in E:
+			if e.other_vertex(self) == v:
+				return e
+
+		raise Exception("Error: Vertex %d not found from vertex %d" % (v.id_, self.id_))
 
 	@property
 	def prefix_neighbors(self):
@@ -52,6 +66,7 @@ class OverlapVertex(Vertex):
 		return self.prefix_neighbors | self.suffix_neighbors
 
 	def disconnect_edge(self, e):
+		print >> sys.stderr, 'deleting', self.id_, e.id_
 		self.head_edges.discard(e)
 		self.tail_edges.discard(e)
 	

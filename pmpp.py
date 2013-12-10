@@ -1,4 +1,6 @@
-from string_graph import OverlapVertex
+import sys
+
+from string_graph import OverlapVertex, OverlapEdge
 from intervals import print_true_intervals, get_true_intervals
 from visualize import print_repeat
 
@@ -158,14 +160,142 @@ def visit_neighborhood(g, v, visited, ovl):
 
 def resolve_repeats(g, V, wells='edges'):
 	for v in V:
+		# true_chrom = {x[0] for x in get_true_intervals(v, [c for c in v.metadata['contigs']])}
+		# if true_chrom == set([6]) or true_chrom == set([3]):
+			# continue
+
 		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
-			# pairs_to_resolve = try_to_resolve(v, g, wells=wells)
-			# resolve_pairs(g, v, pairs_to_resolve)
-			H_to_T = try_to_resolve_new(v, g)
-			resolve_pairs_new(g, v, pairs_to_resolve)
+			# try_to_resolve(v, g, wells=wells)
+			pairs_to_resolve = get_vertices_to_resolve(v, g)
+			resolve_from_vertex_pairs(v, g, pairs_to_resolve)
+
+def resolve_from_vertex_pairs(v, g, pairs_to_resolve):
+	"""Resolves repeat allowing multiple edge mappings.
+
+	Requires a bipartite graph in the form of a dictionary H_to_T.
+	It disconnects from the repeat every node that has an edge
+	and reconnects it to a new copy of a repeat.
+	Any nodes without edges are left connected to the original vertex.
+	If nothing is left, the repeat is deleted.
+	"""
+
+	# record list of edges to be deleted from v:
+	E_disconnect = set()
+	R = set()
+
+	# disconnect these vertices:
+	for (v_h, v_t) in pairs_to_resolve:
+		# get old edges:
+		e_h = v_h.edge_to_vertex(v)
+		e_t = v_t.edge_to_vertex(v)
+
+		for vv in (v_h, v_t):
+			if vv.id_ == 3764010:
+				print '--'
+				for e in vv.edges:
+					print e.id_, e.other_vertex(vv).id_, e.connection[v]
+				print '--'
+
+
+		# record edges for deletion
+		E_disconnect.add(e_h)
+		E_disconnect.add(e_t)
+
+		R.add(v_h)
+		R.add(v_t)
+
+		# create new copy of repeat vertex
+		v_new = OverlapVertex(g.vertex_id_generator.get_id(), str(v.seq))
+		v_new.metadata = v.metadata.copy()
+
+		# create new edges
+		e_h_new = OverlapEdge(
+			g.edge_id_generator.get_id(), 
+			v_h, v_new, 
+			e_h.ovl_start[v_h], e_h.ovl_end[v_h], len(v_h),
+			e_h.ovl_start[v], e_h.ovl_end[v], len(v),
+			e_h.v2_orientation
+		)
+
+		e_t_new = OverlapEdge(
+			g.edge_id_generator.get_id(), 
+			v_t, v_new, 
+			e_t.ovl_start[v_t], e_t.ovl_end[v_t], len(v_t),
+			e_t.ovl_start[v], e_t.ovl_end[v], len(v),
+			e_t.v2_orientation
+		)
+
+		# TODO: g.add_vertex(v), add_edge(e) methods that take care of everything
+		v_new.head_edges.add(e_h_new)
+		v_new.tail_edges.add(e_t_new)
+
+		# get right orientation and add e_h_new to either head or tail of v_h
+		if e_h.connection[v_h] == 'H':
+			v_h.head_edges.add(e_h_new)
+		elif e_h.connection[v_h] == 'T':
+			v_h.tail_edges.add(e_h_new)
+		
+		# get right orientation and add e_t_new to either head or tail of v_t
+		if e_t.connection[v_t] == 'H':
+			v_t.head_edges.add(e_t_new)
+		elif e_t.connection[v_t] == 'T':
+			v_t.tail_edges.add(e_t_new)
+
+		g.add_edge(e_h_new)
+		g.add_edge(e_t_new)
+		g.add_vertex(v_new)
+
+	# remove all edges marked for removal
+	for e in E_disconnect:
+		w = e.other_vertex(v)
+		print >> sys.stderr, e.id_, w.id_
+		g.remove_edge(e)
+
+	# for n in R:
+	# 	if v in n.neighbors:
+	# 		print n.id_
+	# 		exit("Fuck")
+
+	# finally, remove what's left of the repeat
+	if len(v.edges) == 0:
+		g.remove_vertex(v)
+
+	# in the end, surrounding vertices not found to be linked will
+	# still be connected to v
+
+def get_vertices_to_resolve(v, g):
+	H = {e.other_vertex(v) for e in v.head_edges if e.v1 != e.v2}
+	T = {e.other_vertex(v) for e in v.tail_edges if e.v1 != e.v2}
+
+	# H_wells_map = {v: v.get_wells() for v in H}
+	# T_wells_map = {v: v.get_wells() for v in T}
+	H_wells_map = get_wells_by_vertex(v, H)
+	T_wells_map = get_wells_by_vertex(v, T)
+
+	for vv in H_wells_map:
+		if vv.id_ == 3764251:
+			print >>sys.stderr, '!!', v.id_
+
+	pairs_to_resolve = set()
+	for v_h in H:
+		for v_t in T:
+			if v_h == v_t: continue
+			# if they have >=3 wells in common, connect them:
+			if len(H_wells_map[v_h] & T_wells_map[v_t]) >= 4:
+				pairs_to_resolve.add((v_h, v_t))
+
+	return pairs_to_resolve
 
 def try_to_resolve_new(v, g):
-	"""Function to match wells to each other."""
+	"""Match edges on each side of a repaat
+
+	This is a function I wrote to test a way to match
+	multiple head edgres to the same tail. Then I wrote another
+	one to do it properly.
+	"""
+
+	if len(v.head_edges) <= 1 and len(v.tail_edges) <= 1:
+		return set()
 	# H = {e.other_vertex(v) for e in v.head_edges if e.v1 != e.v2}
 	# T = {e.other_vertex(v) for e in v.tail_edges if e.v1 != e.v2}
 	H = {e for e in v.head_edges if e.v1 != e.v2}
@@ -289,6 +419,19 @@ def get_wells_by_edge(v, E):
 			exit("Error.")
 
 	return wells_by_edge
+
+def get_wells_by_vertex(repeat_v, V):
+	wells_by_vertex = {v: set() for v in V}
+	for v in V:
+		e = repeat_v.edge_to_vertex(v)
+		if e.connection[v] == 'H':
+			wells_by_vertex[v] = v.get_head_wells()
+		elif e.connection[v] == 'T':
+			wells_by_vertex[v] = v.get_tail_wells()
+		else:
+			exit("Error.")
+
+	return wells_by_vertex
 
 def get_unique_support(edges_to_wells):
 	""" 
