@@ -195,6 +195,35 @@ def to_graphviz_dot_with_connections(g, resolver, dot_file=sys.stdout):
 
 		dot.write('}\n')
 
+def to_graphviz_dot_with_markup(g, V_sets, E_sets, dot_file=sys.stdout):
+	COLORS = ['blue', 'green', 'cyan', 'yellow', 'magenta', 'purple', 'pink', 'chocolate']
+	v_color_map = dict()
+	for i, V in enumerate(V_sets):
+		for v in V:
+			v_color_map[v] = COLORS[i]
+
+	e_color_map = dict()
+	for i, E in enumerate(E_sets):
+		for e in E:
+			e_color_map[e] = COLORS[i]
+
+	# print the graph
+	with open(dot_file, 'w') as dot:
+		dot.write('digraph adj {\n')
+		for v in g.vertices:
+			I = get_true_intervals(v, v.metadata['contigs'])
+			if len(I) > 1:
+				color = "red"
+			else:
+				color = "black"
+
+			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), v_color_map.get(v,color)))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e_color_map.get(e, 'black'), e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+
+		dot.write('}\n')
+
 def to_graphviz_dot_with_double_intervals(g, dot_file):
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')

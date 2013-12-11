@@ -8,7 +8,8 @@ from graph_load import load_from_sga_asqg, save_graph, load_graph
 # save file in dot format
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
          			  to_graphviz_dot_with_double_intervals, \
-         			  to_graphviz_dot_with_connections
+         			  to_graphviz_dot_with_connections, \
+         			  to_graphviz_dot_with_markup
 
 # visualize parts of assembly graph
 from visualize import print_connection, print_repeat
@@ -25,6 +26,9 @@ from contraction import contract_edges
 # graph simplification operation that involve counting wells (PMMP)
 from pmpp import resolve_repeats, delete_spurious_edges, get_wells_by_edge, \
 				 try_to_resolve_new
+
+# traverse graph according to well information
+from traversal import compute_traversals
 
 # method to verify graph correctness
 from verificator import examine_repeats, examine_connections
@@ -95,6 +99,17 @@ def main():
 	repeats_parser.add_argument('--dot')
 	repeats_parser.add_argument('--stats')
 	repeats_parser.add_argument('--masm', action='store_true')
+
+	## TRAVERSE REGIONS CONNECTED BY WELLS
+
+	traverse_parser = subparsers.add_parser('traverse')
+	traverse_parser.set_defaults(func=traverse)
+
+	traverse_parser.add_argument('--inp', required=True)
+	traverse_parser.add_argument('--out', required=True)
+	traverse_parser.add_argument('--dot')
+	traverse_parser.add_argument('--stats')
+	traverse_parser.add_argument('--masm', action='store_true')
 
 	## REMOVE TRANSITIVE EDGES
 
@@ -175,28 +190,6 @@ def repeats(args):
 
 	V_odd = [v for v in g.vertices if len(v.edges) % 2 == 1]
 
-	# for v in V_odd:
-	# 	for n in v.neighbors:
-	# 		c = 0
-	# 		for e in n.edges:
-	# 			if e.other_vertex(n) == v:
-	# 				c += 1
-	# 				if c == 2:
-	# 					raise Exception("whoah!")
-
-	# for v in V_odd:
-	# 	if v.prefix_neighbors & v.suffix_neighbors:
-	# 		print >> sys.stderr, v.id_, [w.id_ for w in v.prefix_neighbors], [w.id_ for w in v.suffix_neighbors]
-	# 		print v.id_
-	# 		print_true_intervals(v, [ctg for ctg in v.metadata['contigs']])
-	# 		for w in v.prefix_neighbors:
-	# 			print w.id_
-	# 			print_true_intervals(w, [ctg for ctg in w.metadata['contigs']])
-	# 		for w in v.suffix_neighbors:
-	# 			print w.id_
-	# 			print_true_intervals(w, [ctg for ctg in w.metadata['contigs']])
-	# 		raise Exception("huh?")
-
 	resolve_repeats(g, V_odd)
 	contract_edges(g)
 	# resolve_repeats(g, V_odd)
@@ -215,6 +208,14 @@ def repeats(args):
 
 	save_graph(g, args.out + '.asqg', 
         		  args.out + '.containment')
+
+def traverse(args):
+	g = load_graph(args.inp + '.asqg', 
+        	       args.inp + '.containment')
+
+	E = compute_traversals(g)
+	to_graphviz_dot_with_markup(g, [[]], [E], args.dot)
+
 
 def remove_transitive(args):
 	g = load_graph(args.inp + '.asqg', 
