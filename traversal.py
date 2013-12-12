@@ -1,3 +1,5 @@
+import logging
+
 from collections import deque
 
 def compute_traversals(g):
@@ -8,8 +10,9 @@ def compute_traversals(g):
 	validate_edge_pairs(g)
 
 	# compute non-repeats (currently, longest vertices)
-	sorted_V = sorted(g.vertices, reverse=True)
+	sorted_V = sorted(g.vertices, reverse=True, key=lambda x: len(x))
 	v_start = sorted_V[0]
+	v_start.print_true_intervals()
 
 	# traverse components from non-repeats
 	E = traverse(v_start)
@@ -17,6 +20,84 @@ def compute_traversals(g):
 	return E
 
 def traverse(start_v):
+	# build initial neighborhood around start_v
+	# i.e. decide which edges you can follow
+	chosen = set()
+	to_visit = deque()
+
+	for e in start_v.edges:
+		if e.connection[start_v] == 'H':
+			# H = start_v.get_head_wells()
+			H = start_v.get_head_history()
+		elif e.connection[start_v] == 'T':
+			# H = start_v.get_tail_wells()
+			H = start_v.get_tail_history()
+
+		if validate_edge(start_v, e, H):
+			chosen.add(e)
+			to_visit.append((start_v, e, H))
+
+	# follow the initial edges if well information is okay
+	# perform a BFS to decide where to follow
+
+	while to_visit:
+		v0, e, H = to_visit.popleft()
+
+		v1 = e.other_vertex(v0)
+		H1 = recompute_history(v0, e, H)
+		if e.connection[v1] == 'H':
+			E1 = v1.tail_edges
+		elif e.connection[v1] == 'T':
+			E1 = v1.head_edges
+
+		for e1 in E1:
+			if e1 == e: continue
+			if e1 in chosen: continue
+			if validate_edge(v1, e1, H1):
+				chosen.add(e1)
+				to_visit.append((v1, e1, H1))
+
+	return chosen
+
+def recompute_history(v, e, H):
+	v1 = e.other_vertex(v)
+	if e.connection[v1] == 'H':
+		# exit by the tail
+		# history_area = len(v1) - 500, len(v1) - 1
+		# overlap_area = e.ovl_start[v1], e.ovl_end[v1]
+		history_back = max(e.ovl_end[v1] - (len(v1) - 500), 0)
+		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
+		H1 = dict(v1.get_tail_history().items() + H_transferred.items())
+	elif e.connection[v1] == 'T':
+		# exit by the head
+		# history_area = 0, 500
+		# overlap_area = e.ovl_start[v1], e.ovl_end[v1]
+		history_back = max(500 - e.ovl_start[v1], 0)
+		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
+		H1 = dict(v1.get_head_history().items() + H_transferred.items())
+
+	return H1
+
+def validate_edge(v, e, H):
+	"""FILLME"""
+
+	W = {H[ctg]['well'] for ctg in H}
+	N = v.metadata['neighborhood'][e]
+	for n, C in N:
+		if C == 'H':
+			W_n = n.get_head_wells()
+		elif C == 'T':
+			W_n = n.get_tail_wells()
+
+		if len(W_n & W) >= 4:
+			logging.info('Validated edge %d from vertex %d' % (e.id_, v.id_))
+			common_wells = list(W_n & W)
+			logging.info('First 5 common wells: %s' % str(common_wells[:5]))
+			return True
+
+	return False
+
+def traverse_old(start_v):
 	# build initial neighborhood around start_v
 	# i.e. decide which edges you can follow
 	start_E = set()

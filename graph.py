@@ -1,5 +1,5 @@
 import sys
-
+import intervals
 from libkuleshov.debug import keyboard
 
 ###############################################################################
@@ -110,11 +110,80 @@ class Vertex(object):
 		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_ends']
 				if self.metadata['contig_ends'][ctg] > len_v - 500}
 
+	def get_head_history(self):
+		return {ctg: dict(well=Vertex.get_well(ctg), pos=self.metadata['contig_starts'])
+				for ctg in self.metadata['contig_starts']
+				if self.metadata['contig_starts'][ctg] < 500}
+
+	def get_tail_history(self):
+		len_v = len(self)
+		return {ctg: dict(well=Vertex.get_well(ctg), pos=len_v-self.metadata['contig_ends'][ctg]-1)
+				for ctg in self.metadata['contig_ends']
+				if self.metadata['contig_ends'][ctg] > len_v - 500}
+
 	@staticmethod
 	def get_well(ctg):
 		assert ctg.startswith('well')
 		fields = ctg.split('_')
 		return fields[0][4:]
+
+	## methods for dealing with intervals
+
+	def get_true_intervals(self):
+		I = list()
+		for ctg in self.metadata['contigs']:
+			I.append(Vertex.parse_interval(ctg))
+
+		if I:
+			return intervals.merge_intervals(I)
+
+	def get_head_intervals(self):
+		I = list()
+		head_ctgs = [ctg for ctg in self.metadata['contigs'] 
+					 if w.metadata['contig_starts'][ctg] != -1 and \
+						w.metadata['contig_starts'][ctg] < 200 ]
+		for ctg in head_ctgs:
+			I.append(Vertex.parse_interval(w, ctg))
+
+		if I:
+			return intervals.merge_intervals(I)
+		else:
+			return list()
+
+	def get_tail_intervals(w, ctgs):
+		I = list()
+		w_len = len(w.seq)
+		tail_ctgs = [ctg for ctg in self.metadata['contigs']
+					 if w.metadata['contig_ends'][ctg] != -1 and \
+			  			w.metadata['contig_ends'][ctg] > w_len - 200 ]
+		for ctg in tail_ctgs:
+			I.append((int(chrom), start + internal_start, start + internal_start + 199))
+
+		if I:
+			return intervals.merge_intervals(I)
+		else:
+			return list()
+
+	def print_true_intervals(self):
+		I = self.get_true_intervals()
+		merged_I = intervals.merge_intervals(I)
+		for i in merged_I:
+			print '\t', i
+
+	@staticmethod
+	def parse_interval(ctg):
+		fields = ctg.split('_')
+		chrom, coords = fields[1].split(':')
+		start, end = (int(x) for x in coords.split('-'))
+
+		# correction for how we generated the reads. bed format is 1-based
+		start -= 1
+		end -= 1
+
+		internal_start = int(fields[2])
+		return int(chrom), start + internal_start, start + internal_start + 199
+
+
 
 class Edge(object):
 	def __init__(self, id_, v1, v2):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import argparse
+import logging
 
 # get graph from SGA's asqg; then load/store from internal asqg-like format
 from graph_load import load_from_sga_asqg, save_graph, load_graph
@@ -109,6 +110,7 @@ def main():
 	traverse_parser.add_argument('--out', required=True)
 	traverse_parser.add_argument('--dot')
 	traverse_parser.add_argument('--stats')
+	traverse_parser.add_argument('--log')
 	traverse_parser.add_argument('--masm', action='store_true')
 
 	## REMOVE TRANSITIVE EDGES
@@ -133,6 +135,14 @@ def main():
 	view_parser.add_argument('--dot')
 
 	args = parser.parse_args()
+
+	if args.log:
+		logging.basicConfig(filename=args.log, 
+							filemode='a',
+							level=logging.NOTSET)
+
+	logging.info('ok')
+
 	args.func(args)
 
 ###############################################################################
