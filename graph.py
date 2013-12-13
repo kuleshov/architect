@@ -101,25 +101,25 @@ class Vertex(object):
 	def get_wells(self):
 		return {Vertex.get_well(ctg) for ctg in self.metadata['contigs']}
 
-	def get_head_wells(self):
+	def get_head_wells(self, d=500):
 		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_starts']
-				if self.metadata['contig_starts'][ctg] < 500}
+				if self.metadata['contig_starts'][ctg] < d}
 
-	def get_tail_wells(self):
+	def get_tail_wells(self, d=500):
 		len_v = len(self)
 		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_ends']
-				if self.metadata['contig_ends'][ctg] > len_v - 500}
+				if self.metadata['contig_ends'][ctg] > len_v - d}
 
 	def get_head_history(self):
 		return {ctg: dict(well=Vertex.get_well(ctg), pos=self.metadata['contig_starts'])
 				for ctg in self.metadata['contig_starts']
-				if self.metadata['contig_starts'][ctg] < 500}
+				if self.metadata['contig_starts'][ctg] < 4000}
 
 	def get_tail_history(self):
 		len_v = len(self)
 		return {ctg: dict(well=Vertex.get_well(ctg), pos=len_v-self.metadata['contig_ends'][ctg]-1)
 				for ctg in self.metadata['contig_ends']
-				if self.metadata['contig_ends'][ctg] > len_v - 500}
+				if self.metadata['contig_ends'][ctg] > len_v - 4000}
 
 	@staticmethod
 	def get_well(ctg):

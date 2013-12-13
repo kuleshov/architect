@@ -56,6 +56,7 @@ def main():
 
 	load_parser.add_argument('--asqg', required=True)
 	load_parser.add_argument('--out', required=True)
+	load_parser.add_argument('--log')
 
 	## CONTRACT
 
@@ -66,6 +67,7 @@ def main():
 	contract_parser.add_argument('--out', required=True)
 	contract_parser.add_argument('--dot')
 	contract_parser.add_argument('--stats')
+	contract_parser.add_argument('--log')
 	contract_parser.add_argument('--masm', action='store_true')
 
 	## DELETE SPURIOUS
@@ -77,6 +79,7 @@ def main():
 	spurious_parser.add_argument('--out', required=True)
 	spurious_parser.add_argument('--dot')
 	spurious_parser.add_argument('--stats')
+	spurious_parser.add_argument('--log')
 	spurious_parser.add_argument('--masm', action='store_true')
 
 	## RESOLVE SHORT REPEATS
@@ -88,6 +91,7 @@ def main():
 	short_repeats_parser.add_argument('--out', required=True)
 	short_repeats_parser.add_argument('--dot')
 	short_repeats_parser.add_argument('--stats')
+	short_repeats_parser.add_argument('--log')
 	short_repeats_parser.add_argument('--masm', action='store_true')
 
 	## RESOLVE REPEATS BY WELLS
@@ -99,6 +103,7 @@ def main():
 	repeats_parser.add_argument('--out', required=True)
 	repeats_parser.add_argument('--dot')
 	repeats_parser.add_argument('--stats')
+	repeats_parser.add_argument('--log')
 	repeats_parser.add_argument('--masm', action='store_true')
 
 	## TRAVERSE REGIONS CONNECTED BY WELLS
@@ -222,6 +227,22 @@ def repeats(args):
 def traverse(args):
 	g = load_graph(args.inp + '.asqg', 
         	       args.inp + '.containment')
+
+	# v1 = g.vertices_by_id[3764095]
+	# print 3764095
+	# print v1.get_head_wells(4000)
+	# # for c in v.metadata['contigs']:
+	# 	# print c
+	# print
+	# v2 = g.vertices_by_id[3713831]
+	# print 3713831
+	# print v2.get_tail_wells(4000)
+	# # for c in v.metadata['contigs']:
+	# # 	print c
+	# print
+	# print v1.get_head_wells(4000) & v2.get_tail_wells(4000)
+	# exit(1)
+
 
 	E = compute_traversals(g)
 	to_graphviz_dot_with_markup(g, [[]], [E], args.dot)

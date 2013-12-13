@@ -166,8 +166,8 @@ def contract_edge(g, e):
 	all_ctgs = new_v.metadata['contig_starts'].copy()
 	new_len = len(new_v.seq)
 	for ctg in all_ctgs:
-		if 1500 < new_v.metadata['contig_starts'][ctg] \
-		<= new_v.metadata['contig_ends'][ctg] < new_len - 1500:
+		if 4000 < new_v.metadata['contig_starts'][ctg] \
+		<= new_v.metadata['contig_ends'][ctg] < new_len - 4000:
 			del new_v.metadata['contig_starts'][ctg]
 			del new_v.metadata['contig_ends'][ctg]
 

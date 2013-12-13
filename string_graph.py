@@ -292,9 +292,9 @@ def break_vertex(v, g):
 	while current_len > 40000:
 		current_contigs = current_v.metadata['contigs']
 		later_contig_starts = sorted([v for v in current_v.metadata['contig_starts'].values() 
-									  if v != -1 and v > 2500])
+									  if v != -1 and v > 4000])
 		later_contig_ends = sorted([v for v in current_v.metadata['contig_ends'].values() 
-							  if v != -1 and v > 2500])
+							  if v != -1 and v > 4000])
 
 		# print contig_starts
 		# print contig_ends

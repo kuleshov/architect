@@ -12,6 +12,7 @@ def compute_traversals(g):
 	# compute non-repeats (currently, longest vertices)
 	sorted_V = sorted(g.vertices, reverse=True, key=lambda x: len(x))
 	v_start = sorted_V[0]
+	v_start = g.vertices_by_id[3764187]
 	v_start.print_true_intervals()
 
 	# traverse components from non-repeats
@@ -33,7 +34,7 @@ def traverse(start_v):
 			# H = start_v.get_tail_wells()
 			H = start_v.get_tail_history()
 
-		if validate_edge(start_v, e, H):
+		if validate_edge_directly(start_v, e, H):
 			chosen.add(e)
 			to_visit.append((start_v, e, H))
 
@@ -50,49 +51,115 @@ def traverse(start_v):
 		elif e.connection[v1] == 'T':
 			E1 = v1.head_edges
 
+		found_extension = False
+
 		for e1 in E1:
 			if e1 == e: continue
 			if e1 in chosen: continue
-			if validate_edge(v1, e1, H1):
+			logging.info('Trying %d -> %d -> %d (D)' %(e.id_, v1.id_, e1.id_))
+			if validate_edge_directly(v1, e1, H1):
 				chosen.add(e1)
 				to_visit.append((v1, e1, H1))
+				found_extension = True
+
+		if not found_extension:
+			for e1 in E1:
+				if e1 == e: continue
+				if e1 in chosen: continue
+				logging.info('Trying %d -> %d -> %d (N)' %(e.id_, v1.id_, e1.id_))
+				if validate_edge_via_neighborhood(v1, e1, H1):
+					chosen.add(e1)
+					to_visit.append((v1, e1, H1))
 
 	return chosen
 
 def recompute_history(v, e, H):
 	v1 = e.other_vertex(v)
+
+	# first get old history from this node, and the new history
+	# to be added
 	if e.connection[v1] == 'H':
 		# exit by the tail
-		# history_area = len(v1) - 500, len(v1) - 1
-		# overlap_area = e.ovl_start[v1], e.ovl_end[v1]
-		history_back = max(e.ovl_end[v1] - (len(v1) - 500), 0)
+		history_back = max(e.ovl_end[v1] - (len(v1) - 4000), 0)
 		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
-		H1 = dict(v1.get_tail_history().items() + H_transferred.items())
+		v1_wells = v1.get_head_wells(d=4000)
+		v1_history = v1.get_tail_history()
 	elif e.connection[v1] == 'T':
 		# exit by the head
-		# history_area = 0, 500
-		# overlap_area = e.ovl_start[v1], e.ovl_end[v1]
-		history_back = max(500 - e.ovl_start[v1], 0)
+		history_back = max(4000 - e.ovl_start[v1], 0)
 		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
-		H1 = dict(v1.get_head_history().items() + H_transferred.items())
+		v1_wells = v1.get_tail_wells(d=4000)
+		v1_history = v1.get_head_history()
+
+	# get history wells
+	history_wells = {H[ctg]['well'] for ctg in H}
+
+	# determine if this is a repeat node
+	if len(v1) < 3000:
+		if len(v1.edges) > 2:
+			repeat = True
+		elif len(v1_wells & history_wells) / float(len(v1_wells)) < 0.7:
+			repeat = True
+		else:
+			repeat = False
+	else:
+		repeat = False
+
+	# handle vertex accordingly
+	if repeat:
+		# this is a repeat, don't include its wells
+		logging.info('Node %d found to be a repeat' % v1.id_)
+		H1 = H_transferred
+	else:
+		# add this nodes' wells to the history too:
+		H1 = dict(v1_history.items() + H_transferred.items())
 
 	return H1
 
-def validate_edge(v, e, H):
+def validate_edge_directly(v, e, H):
+	"""FILLME"""
+
+	W = {H[ctg]['well'] for ctg in H}
+	v1 = e.other_vertex(v)
+	if e.connection[v1] == 'H':
+		W1 = v1.get_head_wells(d=4000)
+	elif e.connection[v1] == 'T':
+		W1 = v1.get_tail_wells(d=4000)
+
+	if len(W1 & W) >= 4:
+		return True
+	else:
+		return False
+
+def validate_edge_via_neighborhood(v, e, H):
 	"""FILLME"""
 
 	W = {H[ctg]['well'] for ctg in H}
 	N = v.metadata['neighborhood'][e]
 	for n, C in N:
 		if C == 'H':
-			W_n = n.get_head_wells()
+			W_n = n.get_head_wells(d=4000)
 		elif C == 'T':
-			W_n = n.get_tail_wells()
+			W_n = n.get_tail_wells(d=4000)
+
+		if v.id_ == 3740135:
+			logging.info('>>> checking n = %d at %s' % (n.id_, C))
+			if n.id_ == 3764238:
+				logging.info('... %s' % str(W))
+				logging.info('... %s' % str(W_n))
+				logging.info('... %s' % str(W_n & W))
+				H = v.get_tail_history()
+				logging.info(',,, %s' % str({H[ctg]['well'] for ctg in H}))
+				logging.info(',,, %s' % str(v.get_tail_wells()))
+				logging.info(',,, %s' % str(v.get_head_wells()))
 
 		if len(W_n & W) >= 4:
-			logging.info('Validated edge %d from vertex %d' % (e.id_, v.id_))
+			logging.info('Validated edge %d from vertex %d '
+						 'because of neighbor %d' % (e.id_, v.id_, n.id_))
 			common_wells = list(W_n & W)
-			logging.info('First 5 common wells: %s' % str(common_wells[:5]))
+			# logging.info('Common wells: %s' % str(common_wells))
+			# logging.info('Wells at %d: %s' % (v.id_, str(W)))
+			# logging.info('Wells at %d: %s' % (n.id_, str(W_n)))
 			return True
 
 	return False
