@@ -111,7 +111,7 @@ class Vertex(object):
 				if self.metadata['contig_ends'][ctg] > len_v - d}
 
 	def get_head_history(self):
-		return {ctg: dict(well=Vertex.get_well(ctg), pos=self.metadata['contig_starts'])
+		return {ctg: dict(well=Vertex.get_well(ctg), pos=self.metadata['contig_starts'][ctg])
 				for ctg in self.metadata['contig_starts']
 				if self.metadata['contig_starts'][ctg] < 4000}
 

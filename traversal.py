@@ -12,7 +12,7 @@ def compute_traversals(g):
 	# compute non-repeats (currently, longest vertices)
 	sorted_V = sorted(g.vertices, reverse=True, key=lambda x: len(x))
 	v_start = sorted_V[0]
-	v_start = g.vertices_by_id[3764187]
+	v_start = g.vertices_by_id[3764180]
 	v_start.print_true_intervals()
 
 	# traverse components from non-repeats
@@ -34,7 +34,7 @@ def traverse(start_v):
 			# H = start_v.get_tail_wells()
 			H = start_v.get_tail_history()
 
-		if validate_edge_directly(start_v, e, H):
+		if validate_edge_via_neighborhood(start_v, e, H):
 			chosen.add(e)
 			to_visit.append((start_v, e, H))
 
@@ -76,18 +76,21 @@ def traverse(start_v):
 def recompute_history(v, e, H):
 	v1 = e.other_vertex(v)
 
+	logging.debug('Recomputing history towards node %d' % v1.id_)
+
 	# first get old history from this node, and the new history
 	# to be added
 	if e.connection[v1] == 'H':
 		# exit by the tail
-		history_back = max(e.ovl_end[v1] - (len(v1) - 4000), 0)
-		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
+		history_cutoff = max(e.ovl_end[v1] - (len(v1) - 4000), 0)
+		logging.debug('... %d' % history_cutoff)
+		H_transferred = {k:H[k] for k in H if H[k]['pos'] < history_cutoff}
 		v1_wells = v1.get_head_wells(d=4000)
 		v1_history = v1.get_tail_history()
 	elif e.connection[v1] == 'T':
 		# exit by the head
-		history_back = max(4000 - e.ovl_start[v1], 0)
-		H_transferred = {k:H[k] for k in H if H[k]['pos'] > history_back}
+		history_cutoff = max(4000 - e.ovl_start[v1], 0)
+		H_transferred = {k:H[k] for k in H if H[k]['pos'] < history_cutoff}
 		v1_wells = v1.get_tail_wells(d=4000)
 		v1_history = v1.get_head_history()
 
@@ -114,6 +117,9 @@ def recompute_history(v, e, H):
 		# add this nodes' wells to the history too:
 		H1 = dict(v1_history.items() + H_transferred.items())
 
+	logging.debug('Started with history of length %d,'
+				  'returned with length %d' % (len(H), len(H1)))
+
 	return H1
 
 def validate_edge_directly(v, e, H):
@@ -121,10 +127,16 @@ def validate_edge_directly(v, e, H):
 
 	W = {H[ctg]['well'] for ctg in H}
 	v1 = e.other_vertex(v)
+
 	if e.connection[v1] == 'H':
 		W1 = v1.get_head_wells(d=4000)
 	elif e.connection[v1] == 'T':
 		W1 = v1.get_tail_wells(d=4000)
+
+	logging.debug('Trying vertex %d via edge %d from %d: %d common wells' 
+		% (v1.id_, e.id_, v.id_, len(W1 & W)))
+	logging.debug('History: %s' % str(W))
+	logging.debug('Target: %s' % str(W1))
 
 	if len(W1 & W) >= 4:
 		return True
@@ -154,7 +166,7 @@ def validate_edge_via_neighborhood(v, e, H):
 				logging.info(',,, %s' % str(v.get_head_wells()))
 
 		if len(W_n & W) >= 4:
-			logging.info('Validated edge %d from vertex %d '
+			logging.debug('Validated edge %d from vertex %d '
 						 'because of neighbor %d' % (e.id_, v.id_, n.id_))
 			common_wells = list(W_n & W)
 			# logging.info('Common wells: %s' % str(common_wells))

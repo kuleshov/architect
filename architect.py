@@ -144,7 +144,7 @@ def main():
 	if args.log:
 		logging.basicConfig(filename=args.log, 
 							filemode='a',
-							level=logging.NOTSET)
+							level=logging.INFO)
 
 	logging.info('ok')
 
@@ -228,14 +228,14 @@ def traverse(args):
 	g = load_graph(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
-	# v1 = g.vertices_by_id[3764095]
-	# print 3764095
+	# v1 = g.vertices_by_id[3754080]
+	# print 3754080
 	# print v1.get_head_wells(4000)
 	# # for c in v.metadata['contigs']:
 	# 	# print c
 	# print
-	# v2 = g.vertices_by_id[3713831]
-	# print 3713831
+	# v2 = g.vertices_by_id[3740135]
+	# print 3740135
 	# print v2.get_tail_wells(4000)
 	# # for c in v.metadata['contigs']:
 	# # 	print c
