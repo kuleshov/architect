@@ -34,8 +34,8 @@ from traversal import compute_traversals
 # method to verify graph correctness
 from verificator import examine_repeats, examine_connections
 
-# remove some transitive edges
-from remove_transitive import pop_triangles
+# pop bubbles
+from bubbles import pop_triangles, simplify_graph
 
 # resolve short repeats in the graph by using lengths
 from resolve_repeats import resolve_short_repeats
@@ -118,16 +118,17 @@ def main():
 	traverse_parser.add_argument('--log')
 	traverse_parser.add_argument('--masm', action='store_true')
 
-	## REMOVE TRANSITIVE EDGES
+	## POP BUBBLES
 
-	remove_transitive_parser = subparsers.add_parser('remove-transitive')
-	remove_transitive_parser.set_defaults(func=remove_transitive)
+	bubbles_parser = subparsers.add_parser('pop-bubbles')
+	bubbles_parser.set_defaults(func=bubbles)
 
-	remove_transitive_parser.add_argument('--inp', required=True)
-	remove_transitive_parser.add_argument('--out', required=True)
-	remove_transitive_parser.add_argument('--dot')
-	remove_transitive_parser.add_argument('--stats')
-	remove_transitive_parser.add_argument('--masm', action='store_true')
+	bubbles_parser.add_argument('--inp', required=True)
+	bubbles_parser.add_argument('--out', required=True)
+	bubbles_parser.add_argument('--dot')
+	bubbles_parser.add_argument('--stats')
+	bubbles_parser.add_argument('--log')
+	bubbles_parser.add_argument('--masm', action='store_true')
 
 	## VIEW STATISTICS
 
@@ -248,11 +249,12 @@ def traverse(args):
 	to_graphviz_dot_with_markup(g, [[]], [E], args.dot)
 
 
-def remove_transitive(args):
+def bubbles(args):
 	g = load_graph(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
-	pop_triangles(g)
+	simplify_graph(g)
+	save_optional_output(g, args)
 
 	save_graph(g, args.out + '.asqg', 
         		  args.out + '.containment')

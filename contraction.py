@@ -2,8 +2,11 @@ from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
 from string_graph import OverlapVertex, no_diedge
 
-def contract_edges(g):
-	candidate_edges = set(g.edges)
+def contract_edges(g, E=None):
+	if not E:
+		candidate_edges = set(g.edges)
+	else:
+		candidate_edges = E
 
 	remove_loops(g)
 	# remove_parallel_edges

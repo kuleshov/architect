@@ -149,7 +149,7 @@ def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 			if v.id_ == 3764187:
 				color = "green"
 
-			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), color))
+			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id_, v.id_, len(v), ','.join([str(i) for i in I]), color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
 			# if v1.id_ == 3706567 and v2.id_ == 3712515:

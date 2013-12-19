@@ -66,7 +66,6 @@ class OverlapVertex(Vertex):
 		return self.prefix_neighbors | self.suffix_neighbors
 
 	def disconnect_edge(self, e):
-		print >> sys.stderr, 'deleting', self.id_, e.id_
 		self.head_edges.discard(e)
 		self.tail_edges.discard(e)
 	
