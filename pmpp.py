@@ -186,11 +186,6 @@ def resolve_from_vertex_pairs(v, g, pairs_to_resolve):
 		print >> sys.stderr, e.id_, w.id_
 		g.remove_edge(e)
 
-	# for n in R:
-	# 	if v in n.neighbors:
-	# 		print n.id_
-	# 		exit("Fuck")
-
 	# finally, remove what's left of the repeat
 	if len(v.edges) == 0:
 		g.remove_vertex(v)

@@ -7,12 +7,29 @@ from libkuleshov.misc import reverse_string
 from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
 
+class AssemblyGraph(Graph):
+	"""Graph structure storing genome assembly."""
+	def __init__(self):
+		super(AssemblyGraph, self).__init__()
+
+	# FIXME: implement this
+	def add_vertex(self):
+		pass
+
+	# FIXME: implement this
+	def add_overlap_edge(self):
+		pass
+
+	# FIXME: implement this
+	def add_scaffold_edge(self):
+		pass
+
+
 class OverlapVertex(Vertex):
-	def __init__(self, id_, seq):
+	def __init__(self, id_, seq, name=None):
 		super(OverlapVertex, self).__init__(id_)
-
 		self.seq = seq
-
+		self.name = name
 		self.head_edges = set() # edges that connect to the head of the segment
 		self.tail_edges = set() # edges that connect to the tail of the segment
 
@@ -30,11 +47,9 @@ class OverlapVertex(Vertex):
 			E = self.tail_edges
 		else:
 			E = self.edges
-
 		for e in E:
 			if e.other_vertex(self) == v:
 				return e
-
 		raise Exception("Error: Vertex %d not found from vertex %d" % (v.id_, self.id_))
 
 	@property
@@ -43,10 +58,8 @@ class OverlapVertex(Vertex):
 		for e in self.head_edges:
 			N.add(e.v1)
 			N.add(e.v2)
-
 		if N:
 			N.remove(self)
-
 		return N
 
 	@property
@@ -55,10 +68,8 @@ class OverlapVertex(Vertex):
 		for e in self.tail_edges:
 			N.add(e.v1)
 			N.add(e.v2)
-
 		if N:
 			N.remove(self)
-
 		return N
 
 	@property
@@ -68,12 +79,47 @@ class OverlapVertex(Vertex):
 	def disconnect_edge(self, e):
 		self.head_edges.discard(e)
 		self.tail_edges.discard(e)
+
+class AssemblyEdge(Edge):
+	"""Abstract assembly graph edge class."""
+	def __init__(self, id_, v1, v2, ori):
+		super(AssemblyEdge, self).__init__(id_, v1, v2)
+		self._orientation = ori
 	
-class OverlapEdge(Edge):
+	def shift(self, v, shift):
+		raise NotImplementedError("Subclass should implement this")
+
+	def flip_connection(self, v):
+		raise NotImplementedError("Subclass should implement this")
+
+	def replace(self, v, w):
+		raise NotImplementedError("Subclass should implement this")
+
+	@property
+	def is_scaffold_edge(self):
+		raise NotImplementedError("Subclass should implement this")
+
+	@property
+	def is_overlap_edge(self):
+		raise NotImplementedError("Subclass should implement this")
+
+	@property
+	def orientation(self):
+		return self._orientation
+
+	@orientation.setter
+	def orientation(self, v):
+		self._orientation = v
+
+	def flip(self):
+		""" Flips edge from H->T to T->H and vice versa. """
+		self.v1, self.v2 = self.v2, self.v1
+		
+class OverlapEdge(AssemblyEdge):
 	def __init__(self, id_, v1, v2, 
 				 v1_ovl_start, v1_ovl_end, v1_len, 
 				 v2_ovl_start, v2_ovl_end, v2_len, 
-				 v2_orientation):
+				 orientation):
 
 		# figure out the type of connection (L->R), (R->L)
 		if v1_ovl_start != 0:
@@ -84,19 +130,17 @@ class OverlapEdge(Edge):
 			exit()
 
 		if connection == 'LR':
-			super(OverlapEdge, self).__init__(id_, v1, v2)
+			super(OverlapEdge, self).__init__(id_, v1, v2, orientation)
 		elif connection == 'RL':
-			super(OverlapEdge, self).__init__(id_, v2, v1)
+			super(OverlapEdge, self).__init__(id_, v2, v1, orientation)
 
 		self.ovl_start = {v1: v1_ovl_start, v2: v2_ovl_start}
 		self.ovl_end = {v1: v1_ovl_end, v2: v2_ovl_end}
 
 		assert v1_len == len(v1)
 		assert v2_len == len(v2)
-		length = {v1: v1_len, v2: v2_len}
-		
-		self.v2_orientation = v2_orientation
 
+		# FIXME: make this a property
 		self.connection = dict()
 		for v in (v1, v2):
 			if self.ovl_start[v] == 0:
@@ -106,7 +150,7 @@ class OverlapEdge(Edge):
 			else:
 				exit("ERROR: Reads don't overlap at endpoints")
 
-	def shift_overlap(self, v, ovl_shift):
+	def shift(self, v, ovl_shift):
 		self.ovl_start[v] += ovl_shift
 		self.ovl_end[v] += ovl_shift
 
@@ -145,10 +189,65 @@ class OverlapEdge(Edge):
 		self.ovl_end.pop(v)
 		self.connection.pop(v)
 
-	def flip(self):
-		""" Flips edge from H->T to T->H and vice versa. """
+	@property
+	def is_scaffold_edge(self):
+		return False
 
-		self.v1, self.v2 = self.v2, self.v1
+	@property
+	def is_overlap_edge(self):
+		return True
+
+class ScaffoldEdge(AssemblyEdge):
+	def __init__(self, id_, v1, v2, c1, c2, ori, d):
+		super(ScaffoldEdge, self).__init__(id_, v1, v2, ori)
+		self._distance = d 		# estimated distance between the two vertices
+		self._support = 1
+		self._connection = {v1:c1, v2:c2}
+
+	def replace(self, v, w):
+		self.connection[w] = self.connection[v]
+		
+		if self.v1 == v:
+			self.v1 = w
+		elif self.v2 == v:
+			self.v2 = w
+
+	def flip_connection(self, v):
+		if self.connection[v] == 'H':
+			self.connection[v] = 'T'
+		elif self.connection[v] == 'T':
+			self.connection[v] = 'H'
+		else:
+			raise ValueError('Invalid connection type')
+
+	def shift(self, v):
+		# nothing do do yet
+		# if we store read positions on contigs, then this will be modified
+		pass
+
+	@property
+	def support(self):
+	  return self._support
+
+	@support.setter
+	def support(self, count):
+		self._support = count
+
+	@property
+	def connection(self):
+	  return self._connection
+
+	@property
+	def distance(self):
+	    return self._distance
+
+	@property
+	def is_scaffold_edge(self):
+		return True
+
+	@property
+	def is_overlap_edge(self):
+		return False
 
 class Sequence(object):
 	def __init__(self, seq):

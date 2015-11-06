@@ -4,7 +4,9 @@ import argparse
 import logging
 
 # get graph from SGA's asqg; then load/store from internal asqg-like format
-from graph_load import load_from_sga_asqg, save_graph, load_graph
+from graph_load import load_from_sga_asqg, load_from_asqg, \
+											 load_from_fasta_tsv, \
+											 save_graph, save_fasta
 
 # save file in dot format
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
@@ -22,7 +24,7 @@ from misassemblies import examine_misassemblies
 from graph_stats import print_stats
 
 # contract edges that are similar
-from contraction import contract_edges
+from contraction import contract_edges, remove_loops, remove_parallel_edges
 
 # graph simplification operation that involve counting wells (PMMP)
 from pmpp import resolve_repeats, delete_spurious_edges, get_wells_by_edge, \
@@ -35,7 +37,8 @@ from traversal import compute_traversals
 from verificator import examine_repeats, examine_connections
 
 # pop bubbles
-from bubbles import pop_triangles, simplify_graph
+from bubbles import pop_triangles, simplify_graph, check_bubbles, \
+					detect_bubble_from_pointers
 
 # resolve short repeats in the graph by using lengths
 from resolve_repeats import resolve_short_repeats
@@ -43,7 +46,7 @@ from resolve_repeats import resolve_short_repeats
 from libkuleshov.debug import keyboard
 from intervals import print_true_intervals
 
-##############################################################################
+# ----------------------------------------------------------------------------
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -130,6 +133,17 @@ def main():
 	bubbles_parser.add_argument('--log')
 	bubbles_parser.add_argument('--masm', action='store_true')
 
+	## SCAFFOLDER
+
+	bubbles_parser = subparsers.add_parser('scaffold')
+	bubbles_parser.set_defaults(func=scaffold)
+
+	bubbles_parser.add_argument('--fasta', required=True)
+	bubbles_parser.add_argument('--edges', required=True)
+	bubbles_parser.add_argument('--dot')
+	bubbles_parser.add_argument('--stats')
+	bubbles_parser.add_argument('--log')
+
 	## VIEW STATISTICS
 
 	view_parser = subparsers.add_parser('view')
@@ -151,8 +165,8 @@ def main():
 
 	args.func(args)
 
-###############################################################################
-## FUNCTIONS
+# ----------------------------------------------------------------------------
+# entry point functions
 
 def load(args):
 	g = load_from_sga_asqg(args.asqg)
@@ -161,7 +175,7 @@ def load(args):
         		  args.out + '.containment')
 
 def contract(args):
-	g = load_graph(args.inp + '.asqg', args.inp + '.containment')
+	g = load_from_asqg(args.inp + '.asqg', args.inp + '.containment')
 
 	contract_edges(g)
 	save_optional_output(g, args)
@@ -170,7 +184,7 @@ def contract(args):
         		  args.out + '.containment')
 
 def spurious(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
 	for i in xrange(4):
@@ -191,7 +205,7 @@ def spurious(args):
         		  args.out + '.containment')
 
 def short_repeats(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
 	resolve_short_repeats(g)
@@ -201,7 +215,7 @@ def short_repeats(args):
         		  args.out + '.containment')
 
 def repeats(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
 	V_odd = [v for v in g.vertices if len(v.edges) % 2 == 1]
@@ -226,41 +240,37 @@ def repeats(args):
         		  args.out + '.containment')
 
 def traverse(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
-	# v1 = g.vertices_by_id[3754080]
-	# print 3754080
-	# print v1.get_head_wells(4000)
-	# # for c in v.metadata['contigs']:
-	# 	# print c
-	# print
-	# v2 = g.vertices_by_id[3740135]
-	# print 3740135
-	# print v2.get_tail_wells(4000)
-	# # for c in v.metadata['contigs']:
-	# # 	print c
-	# print
-	# print v1.get_head_wells(4000) & v2.get_tail_wells(4000)
-	# exit(1)
 
-
-	E = compute_traversals(g)
+	E, forward_pointers = compute_traversals(g)
+	check_bubbles(g, forward_pointers)
 	to_graphviz_dot_with_markup(g, [[]], [E], args.dot)
 
 
 def bubbles(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
-	simplify_graph(g)
-	save_optional_output(g, args)
+	E, forward_pointers = compute_traversals(g)
+
+	# keyboard()
+
+	v0 = g.vertices_by_id[3764088]
+	e0 = g.edges_by_id[106]
+
+	v0, v1 = detect_bubble_from_pointers(g, v0, e0, forward_pointers, 1000)
+
+	print v0.id_, v1.id_
+
+	to_graphviz_dot_with_markup(g, [[]], [E], args.dot)
 
 	save_graph(g, args.out + '.asqg', 
         		  args.out + '.containment')
 
 def view(args):
-	g = load_graph(args.inp + '.asqg', 
+	g = load_from_asqg(args.inp + '.asqg', 
         	       args.inp + '.containment')
 
 	if args.edge:
@@ -277,8 +287,15 @@ def view(args):
 	wells_by_edge = get_wells_by_edge(v, v.edges)
 	print_repeat(v, wells_by_edge)
 
-###############################################################################
-## HELPERS
+def scaffold(args):
+	g = load_from_fasta_tsv(args.fasta, args.edges)
+	print_stats(g)
+	contract_edges(g)
+	print_stats(g)
+	save_fasta(g, 'test.fasta')
+
+# ----------------------------------------------------------------------------
+# helpers
 
 def save_optional_output(g, args):
 	if args.dot:

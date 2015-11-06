@@ -2,6 +2,8 @@ import logging
 
 from collections import deque
 
+from string_graph import OverlapVertex
+
 def compute_traversals(g):
 	# compute neighborhoods
 	compute_neighborhoods(g)
@@ -12,18 +14,21 @@ def compute_traversals(g):
 	# compute non-repeats (currently, longest vertices)
 	sorted_V = sorted(g.vertices, reverse=True, key=lambda x: len(x))
 	v_start = sorted_V[0]
-	v_start = g.vertices_by_id[3764180]
+	# v_start = g.vertices_by_id[3764180]
 	v_start.print_true_intervals()
 
 	# traverse components from non-repeats
-	E = traverse(v_start)
+	E, forward_pointers = traverse(v_start)
 
-	return E
+	# simplify_from_pointers(g, forward_pointers)
+
+	return E, forward_pointers
 
 def traverse(start_v):
 	# build initial neighborhood around start_v
 	# i.e. decide which edges you can follow
 	chosen = set()
+	forward_pointers = dict()
 	to_visit = deque()
 
 	for e in start_v.edges:
@@ -43,6 +48,7 @@ def traverse(start_v):
 
 	while to_visit:
 		v0, e, H = to_visit.popleft()
+		forward_pointers[e] = list()
 
 		v1 = e.other_vertex(v0)
 		H1 = recompute_history(v0, e, H)
@@ -59,6 +65,7 @@ def traverse(start_v):
 			logging.info('Trying %d -> %d -> %d (D)' %(e.id_, v1.id_, e1.id_))
 			if validate_edge_directly(v1, e1, H1):
 				chosen.add(e1)
+				forward_pointers[e].append(e1)
 				to_visit.append((v1, e1, H1))
 				found_extension = True
 
@@ -69,9 +76,10 @@ def traverse(start_v):
 				logging.info('Trying %d -> %d -> %d (N)' %(e.id_, v1.id_, e1.id_))
 				if validate_edge_via_neighborhood(v1, e1, H1):
 					chosen.add(e1)
+					forward_pointers[e1] = e
 					to_visit.append((v1, e1, H1))
 
-	return chosen
+	return chosen, forward_pointers
 
 def recompute_history(v, e, H):
 	v1 = e.other_vertex(v)
@@ -269,6 +277,48 @@ def validate_vertex(N, W):
 			return True
 
 	return False
+
+# -----------------------------------------------------------------------------
+# simplify graph
+
+def simplify_from_pointers(g, forward_pointers):
+	for v in g.vertices:
+		if len(v.head_edges) > 1 or len(v.tail_edges) > 1:
+			pairs_to_resolve = set()
+			for e in v.head_edges:
+				if e in forward_pointers \
+				and len(forward_pointers[e]) == 1 \
+				and forward_pointers[e][0] in v.tail_edges:
+					pairs_to_resolve.add((e, forward_pointers[e][0]))
+
+			for e in v.tail_edges:
+				head_matches = list()
+				if e in forward_pointers \
+				and len(forward_pointers[e]) == 1 \
+				and forward_pointers[e][0] in v.head_edges:
+					pairs_to_resolve.add((forward_pointers[e][0], e))
+
+			for e_h, e_t in pairs_to_resolve:
+				resolve_repeat(v, e_t, e_h, g)
+
+def resolve_repeat(r, e_tail, e_head, g):
+	r_new = OverlapVertex(g.vertex_id_generator.get_id(), str(r.seq))
+	r_new.head_edges.add(e_head)
+	r_new.tail_edges.add(e_tail)
+	g.add_vertex(r_new)
+
+	print "resolving", r.id_, r_new.id_, e_tail.id_, e_head.id_
+
+	r_new.metadata = r.metadata.copy()
+
+	e_head.replace(r, r_new)
+	e_tail.replace(r, r_new)
+
+	r.head_edges.remove(e_head)
+	r.tail_edges.remove(e_tail)
+
+	return r_new
+	
 
 # -----------------------------------------------------------------------------
 # neighborhood calculations

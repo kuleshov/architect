@@ -92,11 +92,7 @@ class Vertex(object):
 	def __ne__(self, v):
 		return self.id_ != v.id_
 
-	## get_neighbors abstract method
-
-	## disconnect edge_abstract method
-
-	## method for dealing with wells
+	## methods for dealing with wells
 
 	def get_wells(self):
 		return {Vertex.get_well(ctg) for ctg in self.metadata['contigs']}
@@ -183,13 +179,11 @@ class Vertex(object):
 		internal_start = int(fields[2])
 		return int(chrom), start + internal_start, start + internal_start + 199
 
-
-
 class Edge(object):
 	def __init__(self, id_, v1, v2):
 		self.id_ = id_
-		self.v1 = v1
-		self.v2 = v2
+		self._v1 = v1
+		self._v2 = v2
 		self.metadata = dict()
 		
 	def __eq__(self, e):
@@ -205,6 +199,22 @@ class Edge(object):
 
 	def __hash__(self):
 		return hash(self.id_)
+
+	@property
+	def v1(self):
+	  return self._v1
+
+	@v1.setter
+	def v1(self, w):
+	  self._v1 = w
+
+	@property
+	def v2(self):
+	  return self._v2
+
+	@v2.setter
+	def v2(self, w):
+	  self._v2 = w
 
 class IdGenerator:
 	def __init__(self, start=0):

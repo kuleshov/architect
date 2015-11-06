@@ -31,9 +31,9 @@ def remove_loops(g):
 
 def remove_parallel_edges(g):
 	visited_pairs = set()
-	E = g.edges.copy()
+	E = list(g.edges)
 	for e in E:
-		s = frozenset(e.v1, e.v2)
+		s = frozenset([e.v1, e.v2])
 		if s not in visited_pairs:
 			visited_pairs.add(s)
 		else:
@@ -64,63 +64,31 @@ def can_be_contracted(e):
 
 	return False
 
-# FIXME: Make this a method of StringGraph
-def flip_vertex(v, g):
-	for e in v.edges:
-		e.v2_orientation = (e.v2_orientation + 1) % 2
-		e.flip_connection(v)
-
-	v.seq = reverse_complement(v.seq)
-	v.head_edges, v.tail_edges = v.tail_edges, v.head_edges
-
-	v_len = len(v.seq)
-
-	v_ctg_starts = v.metadata['contig_starts'].copy()
-	v_ctg_ends = v.metadata['contig_ends'].copy()
-	for ctg in v.metadata['contig_starts']:
-		v.metadata['contig_starts'][ctg] = v_len - v_ctg_ends[ctg] - 1
-		v.metadata['contig_ends'][ctg] = v_len - v_ctg_starts[ctg] - 1
-
-def sequences_equal(s1, s2):
-	if s1 == s2 or s1 == reverse_complement(s2):
-		return True
+def contract_edge(g,e):
+	if e.is_overlap_edge:
+		contract_overlap_edge(g,e)
+	elif e.is_scaffold_edge:
+		contract_scaffold_edge(g,e)
 	else:
-		return False
+		raise ValueError('Invalid edge type found')
 
-def are_complements(s1, s2):
-	if s1 == s2:
-		return False
-	elif s1 == reverse_complement(s2):
-		return True
-	else:
-		exit("ERROR: Sequences not identical")
-
-def contract_edge(g, e):
+def contract_scaffold_edge(g, e):
 	v1, v2 = e.v1, e.v2
 
 	assert e in v1.edges
 	assert e in v2.edges
 
-	if e.connection[e.v1] == e.connection[e.v2]:
-		if e.connection[e.v1] == 'H':
-			flip_vertex(e.v1, g)
-		elif e.connection[e.v1] == 'T':
-			# print e.id_
-			# for f in e.v2.edges:
-				# print f.v1.id_, f.v2.id_, f.connection
-			flip_vertex(e.v2, g)
-			# for f in e.v2.edges:
-				# print f.v1.id_, f.v2.id_, f.connection
-	elif e.connection[e.v1] == 'H' and e.connection[e.v2] == 'T':
-		e.flip()
+	# print
+	# print e.id_, e.connection[v1], e.connection[v2]
+	# print v1.id_, [f.id_ for f in v1.head_edges], [f.id_ for f in v1.tail_edges]
+	# print v2.id_, [f.id_ for f in v2.head_edges], [f.id_ for f in v2.tail_edges]
 
+	_orient_th(g, e, v1, v2)
 	v1, v2 = e.v1, e.v2
 
 	assert e.connection[v1] == 'T' and e.connection[v2] == 'H'
 
-	v1_ovl_start = e.ovl_start[v1]
-	v2_ovl_end = e.ovl_end[v2]
-	orientation = e.v2_orientation
+	orientation = e.orientation
 
 	# remove vertices and edge
 	g.remove_vertex_from_index(v1)
@@ -128,6 +96,56 @@ def contract_edge(g, e):
 	g.remove_edge(e)
 
 	# build new vertex
+	# FIXME: refactor; make this method private
+	new_id = g.vertex_id_generator.get_id()
+
+	# FIXME: handle properly the case of negative distance
+	distance = max(0, e.distance)
+	padding = 'N' * 10
+
+	if orientation == 0:
+		new_seq = v1.seq + padding + v2.seq
+	elif orientation == 1:
+		new_seq = v1.seq + padding + reverse_complement(v2.seq)
+	else:
+		exit("ERROR: Incorrect orientation!")
+
+	new_v = OverlapVertex(new_id, new_seq)
+	new_v.head_edges = v1.head_edges
+	new_v.tail_edges = v2.tail_edges
+
+	# correct edges incident to first_v
+	for f in v1.head_edges:
+		f.replace(v1, new_v)
+
+	for f in v2.tail_edges:
+		f.replace(v2, new_v)
+
+	# insert new node:
+	g.add_vertex(new_v)
+
+def contract_overlap_edge(g, e):
+	v1, v2 = e.v1, e.v2
+
+	assert e in v1.edges
+	assert e in v2.edges
+
+	_orient_th(g, e, v1, v2)
+	v1, v2 = e.v1, e.v2
+
+	assert e.connection[v1] == 'T' and e.connection[v2] == 'H'
+
+	v1_ovl_start = e.ovl_start[v1]
+	v2_ovl_end = e.ovl_end[v2]
+	orientation = e.orientation
+
+	# remove vertices and edge
+	g.remove_vertex_from_index(v1)
+	g.remove_vertex_from_index(v2)
+	g.remove_edge(e)
+
+	# build new vertex
+	# FIXME: refactor; make this method private
 	new_id = g.vertex_id_generator.get_id()
 
 	if orientation == 0:
@@ -157,11 +175,10 @@ def contract_edge(g, e):
 	new_v.metadata['contig_starts'] = dict(v1.metadata['contig_starts'].items() + v2_ctg_starts.items())
 	new_v.metadata['contig_ends'] = dict(v1.metadata['contig_ends'].items() + v2_ctg_ends.items())
 
-	for ctg in new_v.metadata['contig_starts']:
-		assert new_v.metadata['contig_ends'][ctg] - new_v.metadata['contig_starts'][ctg] == 199
-
 	length_increase = len(v1.seq[0:v1_ovl_start])
 
+	# FIXME: fold this into shift function for vertex
+	# NOTE: this is wrong for wells b/c they could occur in v1 & v2
 	for ctg in v2.metadata['contig_starts']:
 		new_v.metadata['contig_starts'][ctg] += length_increase
 		new_v.metadata['contig_ends'][ctg] += length_increase
@@ -180,7 +197,7 @@ def contract_edge(g, e):
 
 	for f in v2.tail_edges:
 		f.replace(v2, new_v)
-		f.shift_overlap(new_v, length_increase)
+		f.shift(new_v, length_increase)
 	
 		if f.ovl_start[new_v] != 0:
 			assert f.ovl_end[new_v] == len(new_v) - 1
@@ -189,3 +206,35 @@ def contract_edge(g, e):
 
 	# insert new node:
 	g.add_vertex(new_v)
+
+# ----------------------------------------------------------------------------
+# helpers
+
+def _orient_th(g, e, v1, v2):
+	"""Changes edge and vertices so that e connects v1, v2 as T->H."""
+
+	if e.connection[e.v1] == e.connection[e.v2]:
+		if e.connection[e.v1] == 'H':
+			_flip_vertex(e.v1, g)
+		elif e.connection[e.v1] == 'T':
+			_flip_vertex(e.v2, g)
+	elif e.connection[e.v1] == 'H' and e.connection[e.v2] == 'T':
+		e.flip()
+
+# FIXME: Make this a method of StringGraph
+def _flip_vertex(v, g):
+	for e in v.edges:
+		e.orientation = (e.orientation + 1) % 2
+		e.flip_connection(v)
+
+	v.seq = reverse_complement(v.seq)
+	v.head_edges, v.tail_edges = v.tail_edges, v.head_edges
+
+	v_len = len(v.seq)
+
+	if v.metadata:
+		v_ctg_starts = v.metadata['contig_starts'].copy()
+		v_ctg_ends = v.metadata['contig_ends'].copy()
+		for ctg in v.metadata['contig_starts']:
+			v.metadata['contig_starts'][ctg] = v_len - v_ctg_ends[ctg] - 1
+			v.metadata['contig_ends'][ctg] = v_len - v_ctg_starts[ctg] - 1
