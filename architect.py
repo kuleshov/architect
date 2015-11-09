@@ -135,14 +135,13 @@ def main():
 
 	## SCAFFOLDER
 
-	bubbles_parser = subparsers.add_parser('scaffold')
-	bubbles_parser.set_defaults(func=scaffold)
+	scaffold_parser = subparsers.add_parser('scaffold')
+	scaffold_parser.set_defaults(func=scaffold)
 
-	bubbles_parser.add_argument('--fasta', required=True)
-	bubbles_parser.add_argument('--edges', required=True)
-	bubbles_parser.add_argument('--dot')
-	bubbles_parser.add_argument('--stats')
-	bubbles_parser.add_argument('--log')
+	scaffold_parser.add_argument('--fasta', required=True)
+	scaffold_parser.add_argument('--edges', required=True)
+	scaffold_parser.add_argument('--containment')
+	scaffold_parser.add_argument('--log')
 
 	## VIEW STATISTICS
 
@@ -288,7 +287,7 @@ def view(args):
 	print_repeat(v, wells_by_edge)
 
 def scaffold(args):
-	g = load_from_fasta_tsv(args.fasta, args.edges)
+	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
 	print_stats(g)
 	contract_edges(g)
 	print_stats(g)

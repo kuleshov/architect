@@ -8,7 +8,7 @@ def merge_intervals(I):
 
 	for i in sorted_I[1:]:
 		if overlaps_sorted(current_i, i):
-			current_i = merge(current_i, i)
+			current_i = _merge(current_i, i)
 		else:
 			merged_I.append(current_i)
 			current_i = i
@@ -28,8 +28,17 @@ def overlaps(a, b):
 		(b[1] <= a[1] <= b[2])
 	)
 
-def merge(a, b):
-	return (a[0], a[1], b[2])
+def union(ivl1, ivl2):
+	assert ivl1[0] == ivl2[0]
+	start = min(ivl1[1], ivl2[1])
+	end = max(ivl1[2], ivl2[2])
+	return (ivl1[0], start, end)
+
+def shift(ivl, shift):
+	return ivl[0], ivl[1]+shift, ivl[2]+shift
+
+def _merge(a, b):
+  return (a[0], a[1], b[2])
 
 ###############################################################################
 ## PARSE INTERVALS ASSOCIATED WITH A VERTEX

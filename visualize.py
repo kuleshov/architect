@@ -7,27 +7,27 @@ from libkuleshov.dna import reverse_complement
 ###############################################################################
 ## PRINT INFORMATION FOR A VERTEX, EDGE
 
-# this probably was moved here and never tested: get_tail_wells is not imported
-def print_vertex(x):
+def print_vertex(v):
 	print '================================='
-	print 'Vertex: %d' % v.id_
-	print [(e_tail.id_, e_head.id_) for (e_tail, e_head) in pairs_to_resolve]
-	print ','.join([str(w) for w in v_wells])
-	print_true_intervals(v, v.metadata['contigs'])
-	print
-	print 'BEFORE:'
+	print 'Vertex: %d' % v.id
+	print 'True intervals:', v.intervals
+	print 'wells:', ', '.join(['%d:%d-%d' % (w, v.well_interval(w)[0], v.well_interval(w)[1]) for w in v.wells])
+	T_wells = v.tail_wells
+	H_wells = v.head_wells
 	print 'H:'
-	for e in H:
+	for e in v.head_edges:
 		w = e.other_vertex(v)
-		wells = ','.join([str(well) for well in w.get_tail_wells() if well in T_wells])
-		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_ends'][ctg] > len(w) - 1000])
+		wells = ', '.join(sorted(['%d:%d-%d' % (well, v.well_interval(well)[0], v.well_interval(well)[1]) 
+														for well in w.tail_wells if well in T_wells]))
+		print e.id, '\t', wells
+		# print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_ends'][ctg] > len(w) - 1000])
 	print 'T:'
-	for e in T:
+	for e in v.tail_edges:
 		w = e.other_vertex(v)
-		wells = ','.join([str(well) for well in w.get_head_wells() if well in H_wells])
-		print e.id_, '\t', wells
-		print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_starts'][ctg] < 1000])
+		wells = ', '.join(sorted(['%d:%d-%d' % (well, v.well_interval(well)[0], v.well_interval(well)[1]) 
+														 for well in w.head_wells if well in H_wells]))
+		print e.id, '\t', wells
+		# print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_starts'][ctg] < 1000])
 		# for ctg in w.metadata['contigs'][:15]:
 		# 	if w.metadata['contig_ends'][ctg] < 1000:
 		# 		print_true_coordinates(w, ctg)
@@ -37,34 +37,32 @@ def print_connection(e):
 	v1, v2 = e.v1, e.v2
 
 	if e.connection[v1] == 'H':
-		v1_wells = v1.get_head_wells()
+		v1_wells = v1.head_wells
 	elif e.connection[v1] == 'T':
-		v1_wells = v1.get_tail_wells()
+		v1_wells = v1.tail_wells
 	if e.connection[v2] == 'H':
-		v2_wells = v2.get_head_wells()
+		v2_wells = v2.head_wells
 	elif e.connection[v2] == 'T':
-		v2_wells = v2.get_tail_wells()
+		v2_wells = v2.tail_wells
 	# v1_wells = get_wells(v1)
 	# v2_wells = get_wells(v2)
 
-	I_v1 = get_true_intervals(v1, v1.metadata['contigs'])
-	I_v2 = get_true_intervals(v2, v2.metadata['contigs'])
-
 	print '================================'
-	print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
-	% (e.id_, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
-			  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
-			  e.v2_orientation)
-	print 'V1: id: %d ,%d contigs, %d bp' % (v1.id_, len(v1.metadata['contigs']), len(v1))
-	print 'V1 wells:', ','.join([str(w) for w in v1_wells])
-	print 'I1', I_v1
-	print 'V2: id: %d ,%d contigs, %d bp' % (v2.id_, len(v2.metadata['contigs']), len(v2))
-	print 'V2 wells:', ','.join([str(w) for w in v2_wells])
-	print 'I2', I_v2
+	if e.is_overlap_edge:
+		print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
+		% (e.id, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
+				  e.ovl_start[v2], e.ovl_end[v2], e.connection[v2],
+				  e.orientation)
+	elif e.is_scaffold_edge:
+		print 'Edge %d: %s%s, ori: %d' % (e.id, e.connection[v1], e.connection[v2], e.orientation)
+	print 'V1: id: %d, %d bp' % (v1.id, len(v1))
+	print 'V1 wells:', ','.join(sorted([str(w) for w in v1_wells]))
+	print 'V2: id: %d, %d bp' % (v2.id, len(v2))
+	print 'V2 wells:', ','.join(sorted([str(w) for w in v2_wells]))
 
 def print_repeat(v, wells_by_edge):
 	print '================================'
-	print 'Vertex %d: %d contigs, %d bp' % (v.id_, len(v.metadata['contigs']), len(v))
+	print 'Vertex %d: %d contigs, %d bp' % (v.id, len(v.metadata['contigs']), len(v))
 	print_true_intervals(v, v.metadata['contigs'])
 	print 'V_wells:', ','.join([str(well) for well in v.get_wells()])
 
@@ -74,7 +72,7 @@ def print_repeat(v, wells_by_edge):
 	for e in v.tail_edges:
 		w = e.other_vertex(v)
 		wells = ','.join([str(well) for well in wells_by_edge[e] if well in H_wells])
-		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id, len(w.metadata['contigs']), len(w), wells)
 		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
 
 	print '-------------------------------'
@@ -82,7 +80,7 @@ def print_repeat(v, wells_by_edge):
 	for e in v.head_edges:
 		w = e.other_vertex(v)
 		wells = ','.join([str(well) for well in wells_by_edge[e] if well in T_wells])
-		print '%d: %d contigs\t %d bp\t wells %s' % (w.id_, len(w.metadata['contigs']), len(w), wells)
+		print '%d: %d contigs\t %d bp\t wells %s' % (w.id, len(w.metadata['contigs']), len(w), wells)
 		print_true_intervals(w, w.metadata['contigs']) # keep only edge contigs?
 
 	print
@@ -110,17 +108,17 @@ def visualize_connection(e):
 def to_abyss_explorer_dot(g, dot_file):
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
-		id_to_num = dict()
+		idto_num = dict()
 		for v in g.vertices:
-			dot.write('"%d+" [l=%d C=1]\n' % (v.id_, len(v.seq)))
-			dot.write('"%d-" [l=%d C=1]\n' % (v.id_, len(v.seq)))
+			dot.write('"%d+" [l=%d C=1]\n' % (v.id, len(v.seq)))
+			dot.write('"%d-" [l=%d C=1]\n' % (v.id, len(v.seq)))
 
 		for e in g.edges:
 			v1, v2, ori = e.v1, e.v2, e.v2_orientation
 			if ori == 0:
-				dot.write('"%d+" -> "%d+"\n' % (v1.id_, v2.id_))
+				dot.write('"%d+" -> "%d+"\n' % (v1.id, v2.id))
 			elif ori == 1:
-				dot.write('"%d+" -> "%d-"\n' % (v1.id_, v2.id_))
+				dot.write('"%d+" -> "%d-"\n' % (v1.id, v2.id))
 			else:
 				exit("ERROR: Invalid orientation")
 
@@ -130,10 +128,10 @@ def to_graphviz_dot(g, dot_file):
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
 		for v in g.vertices:
-			dot.write('%d [label = "%d"]\n' % (v.id_, len(v.seq)))
+			dot.write('%d [label = "%d"]\n' % (v.id, len(v.seq)))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 
@@ -146,15 +144,15 @@ def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
 			color = "black"
 			if len(I) > 1:
 				color = "red"
-			if v.id_ == 3764187:
+			if v.id == 3764187:
 				color = "green"
 
-			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id_, v.id_, len(v), ','.join([str(i) for i in I]), color))
+			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id, v.id, len(v), ','.join([str(i) for i in I]), color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			# if v1.id_ == 3706567 and v2.id_ == 3712515:
+			# if v1.id == 3706567 and v2.id == 3712515:
 			# 	visualize_connection(e)
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 
@@ -165,10 +163,10 @@ def to_graphviz_dot_with_connections(g, resolver, dot_file=sys.stdout):
 	for v in g.vertices:
 		i = 0
 		pairs_to_resolve = resolver(v, g)
-		print v.id_, len(pairs_to_resolve)
+		print v.id, len(pairs_to_resolve)
 		for e_h, e_t in pairs_to_resolve:
-			if v.id_ == 3754668:
-				print e_h.id_, e_t.id_
+			if v.id == 3754668:
+				print e_h.id, e_t.id
 			if e_h not in color_map:
 				color_map[e_h] = list()
 			if e_t not in color_map:
@@ -188,10 +186,10 @@ def to_graphviz_dot_with_connections(g, resolver, dot_file=sys.stdout):
 			else:
 				color = "black"
 
-			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id_, v.id_, ','.join([str(i) for i in I]), color))
+			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id, v.id, ','.join([str(i) for i in I]), color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, ':'.join(color_map.get(e, ['black'])), e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, ':'.join(color_map.get(e, ['black'])), e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 
@@ -217,10 +215,10 @@ def to_graphviz_dot_with_markup(g, V_sets, E_sets, dot_file=sys.stdout):
 			else:
 				color = "black"
 
-			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id_, v.id_, len(v), ','.join([str(i) for i in I]), v_color_map.get(v,color)))
+			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id, v.id, len(v), ','.join([str(i) for i in I]), v_color_map.get(v,color)))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e_color_map.get(e, 'black'), e.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e_color_map.get(e, 'black'), e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')
 
@@ -246,11 +244,11 @@ def to_graphviz_dot_with_double_intervals(g, dot_file):
 				tail_label = ''
 
 			label = head_label + '\n' + tail_label + '\n' + str(len(v))
-			dot.write('%d [label = "%s", color="%s"]\n' % (v.id_, label, color))
+			dot.write('%d [label = "%s", color="%s"]\n' % (v.id, label, color))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			# if v1.id_ == 3706567 and v2.id_ == 3712515:
+			# if v1.id == 3706567 and v2.id == 3712515:
 			# 	visualize_connection(e)
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id_, v2.id_, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
 
 		dot.write('}\n')

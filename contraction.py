@@ -1,3 +1,6 @@
+import intervals
+from visualize import print_vertex, print_connection
+
 from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
 from string_graph import OverlapVertex, no_diedge
@@ -68,7 +71,12 @@ def contract_edge(g,e):
 	if e.is_overlap_edge:
 		contract_overlap_edge(g,e)
 	elif e.is_scaffold_edge:
-		contract_scaffold_edge(g,e)
+		# print_connection(e)
+		# print_vertex(e.v1)
+		# print_vertex(e.v2)
+		v_new = contract_scaffold_edge(g,e)
+		# print_vertex(v_new)
+		# print '---------------------------------------------------------------------'
 	else:
 		raise ValueError('Invalid edge type found')
 
@@ -114,6 +122,8 @@ def contract_scaffold_edge(g, e):
 	new_v.head_edges = v1.head_edges
 	new_v.tail_edges = v2.tail_edges
 
+	_merge_metadata(new_v, v1, v2, len(v1.seq) + len(padding))
+
 	# correct edges incident to first_v
 	for f in v1.head_edges:
 		f.replace(v1, new_v)
@@ -123,6 +133,8 @@ def contract_scaffold_edge(g, e):
 
 	# insert new node:
 	g.add_vertex(new_v)
+
+	return new_v
 
 def contract_overlap_edge(g, e):
 	v1, v2 = e.v1, e.v2
@@ -163,33 +175,9 @@ def contract_overlap_edge(g, e):
 	new_v.head_edges = v1.head_edges
 	new_v.tail_edges = v2.tail_edges
 
-	new_v.metadata['contigs'] = v1.metadata['contigs'] + v2.metadata['contigs']
-	v2_ctg_starts = v2.metadata['contig_starts'].copy()
-	v2_ctg_ends = v2.metadata['contig_ends'].copy()
-	if orientation == 1:
-		v2_len = len(v2.seq)
-		for ctg in v2.metadata['contig_starts']:
-			v2_ctg_starts[ctg] = v2_len - v2.metadata['contig_ends'][ctg] - 1
-			v2_ctg_ends[ctg] = v2_len - v2.metadata['contig_starts'][ctg] - 1
-
-	new_v.metadata['contig_starts'] = dict(v1.metadata['contig_starts'].items() + v2_ctg_starts.items())
-	new_v.metadata['contig_ends'] = dict(v1.metadata['contig_ends'].items() + v2_ctg_ends.items())
-
 	length_increase = len(v1.seq[0:v1_ovl_start])
 
-	# FIXME: fold this into shift function for vertex
-	# NOTE: this is wrong for wells b/c they could occur in v1 & v2
-	for ctg in v2.metadata['contig_starts']:
-		new_v.metadata['contig_starts'][ctg] += length_increase
-		new_v.metadata['contig_ends'][ctg] += length_increase
-
-	all_ctgs = new_v.metadata['contig_starts'].copy()
-	new_len = len(new_v.seq)
-	for ctg in all_ctgs:
-		if 4000 < new_v.metadata['contig_starts'][ctg] \
-		<= new_v.metadata['contig_ends'][ctg] < new_len - 4000:
-			del new_v.metadata['contig_starts'][ctg]
-			del new_v.metadata['contig_ends'][ctg]
+	_merge_metadata(new_v, v1, v2, length_increase)
 
 	# correct edges incident to first_v
 	for f in v1.head_edges:
@@ -232,9 +220,24 @@ def _flip_vertex(v, g):
 
 	v_len = len(v.seq)
 
-	if v.metadata:
-		v_ctg_starts = v.metadata['contig_starts'].copy()
-		v_ctg_ends = v.metadata['contig_ends'].copy()
-		for ctg in v.metadata['contig_starts']:
-			v.metadata['contig_starts'][ctg] = v_len - v_ctg_ends[ctg] - 1
-			v.metadata['contig_ends'][ctg] = v_len - v_ctg_starts[ctg] - 1
+	v_wells = v.wells
+	for w in v_wells:
+		s, e = v.well_interval(w)
+		s_flipped = v_len - e
+		e_flipped = v_len - s - 1
+		v.set_well_interval(w, s_flipped, e_flipped)
+
+def _merge_metadata(new_v, v1, v2, shift):
+	# merge wells
+	for w in v1.wells:
+		s, e = v1.well_interval(w)
+		new_v.add_well(w, s, e)
+	for w in v2.wells:
+		s, e = v2.well_interval(w)
+		new_v.add_well(w, s+shift, e+shift)
+
+	# merge intervals
+	for ivl in v1.intervals:
+		new_v.add_interval(ivl)
+	for ivl in v2.intervals:
+		new_v.add_interval(ivl)

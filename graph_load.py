@@ -51,7 +51,7 @@ def save_graph_to_fasta(g, fasta_path, containment_path):
 def save_fasta(g, fasta_file):
 	with open(fasta_file, 'w') as fasta:
 		for v in g.vertices:
-			fasta.write('>' + str(v.id_) + '\n')
+			fasta.write('>' + str(v.id) + '\n')
 			fasta.write(v.seq + '\n')
 
 # ----------------------------------------------------------------------------
@@ -265,7 +265,7 @@ def _load_from_fasta(fasta_path):
 
 def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None):
 	if not vertices_by_contig:
-		vertices_by_contig = {v.id_ : v for v in g.vertices}
+		vertices_by_contig = {v.id : v for v in g.vertices}
 
 	with open(tsv_path) as tsv:
 		for line in tsv:
@@ -317,9 +317,9 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None):
 
 	return g
 
-def _load_containment(g, containment_file):
+def _load_containment(g, containment_file, vertices_by_contig=None):
 	if not vertices_by_contig:
-		vertices_by_contig = {v.id_ : v for v in g.vertices}
+		vertices_by_contig = {v.id : v for v in g.vertices}
 
 	with open(containment_file) as in_:
 		for line in in_:
@@ -331,7 +331,8 @@ def _load_containment(g, containment_file):
 				continue
 			
 			if fields[0] == CTMT_WELL_REC:
-				pass
+				well, start, end = int(fields[2]), int(fields[3]), int(fields[4])
+				v.add_well(well, start, end)
 
 			elif fields[0] == CTMT_IVL_REC:
 				ivl = (int(fields[2]), int(fields[3]), int(fields[4]))
@@ -346,11 +347,11 @@ def _load_containment(g, containment_file):
 def _write_asqg(g, asqg_file):
 	with open(asqg_file, 'w') as asqg:
 		for v in g.vertices:
-			asqg.write('VT\t%d\t%s\n' % (v.id_, v.seq))
+			asqg.write('VT\t%d\t%s\n' % (v.id, v.seq))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
 			asqg.write('ED\t{v1}\t{v2}\t{v1os}\t{v1oe}\t{v1l}\t{v2os}\t{v2oe}\t{v2l}\t{ori}\n'.format
-				(v1=v1.id_, v2=v2.id_, 
+				(v1=v1.id, v2=v2.id, 
 				 v1os=e.ovl_start[v1], v1oe=e.ovl_end[v1], v1l=len(v1), 
 				 v2os=e.ovl_start[v2], v2oe=e.ovl_end[v2], v2l=len(v2), ori=e.v2_orientation))
 
@@ -358,5 +359,5 @@ def _write_containment(g, containment_file):
 	with open(containment_file, 'w') as out:
 		for v in g.vertices:
 			for ctg in v.metadata['contigs']:
-				out.write('%d\t%s\t%d\t%d\n' % (v.id_, ctg, v.metadata['contig_starts'].get(ctg,-1), 
+				out.write('%d\t%s\t%d\t%d\n' % (v.id, ctg, v.metadata['contig_starts'].get(ctg,-1), 
 																				v.metadata['contig_ends'].get(ctg,-1)))

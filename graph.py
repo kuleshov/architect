@@ -28,38 +28,28 @@ class Graph(object):
 		return self.edges_by_id[id_]
 
 	def add_vertex(self, v):
-		self.vertices_by_id[v.id_] = v
+		self.vertices_by_id[v.id] = v
 
 	def remove_vertex(self, v):
-		print >> sys.stderr, 'xx', v.id_
 		for e in v.head_edges:
 			self.remove(e)
 		for e in v.tail_edges:
 			self.remove(e)
 
-		self.vertices_by_id.pop(v.id_)
+		self.vertices_by_id.pop(v.id)
 
 	def remove_vertex_from_index(self, v):
-		self.vertices_by_id.pop(v.id_)
+		self.vertices_by_id.pop(v.id)
 
 	def add_edge(self, e):
-		self.edges_by_id[e.id_] = e
+		self.edges_by_id[e.id] = e
 
 	def remove_edge(self, e):
 		v1, v2 = e.v1, e.v2
 		
-		self.edges_by_id.pop(e.id_)
+		self.edges_by_id.pop(e.id)
 		v1.disconnect_edge(e)
 		v2.disconnect_edge(e)
-
-		# if v in v1.neighbors:
-		# 	e2 = '...', v1.edge_to_vertex(v)
-		# 	print v1.id_, e2.id_, e.id_
-		# if v in v2.neighbors:
-		# 	e2 = v2.edge_to_vertex(v)
-		# 	print '...', v2.id_, e2.id_, e.id_
-		# assert v not in v1.neighbors
-		# assert v not in v2.neighbors
 
 	def count_connected_components(self):
 		to_visit = set(self.vertices)
@@ -77,45 +67,67 @@ class Graph(object):
 
 class Vertex(object):
 	def __init__(self, id_):
-		self.id_=id_
-		self.metadata = dict()
+		self._id=id_
+		self._metadata = {'wells': dict(), 'intervals': list()}
 		
 	def __eq__(self,v):
-		return self.id_ == v.id_
+		return self._id == v._id
 
 	def __hash__(self):
-		return hash(self.id_)
+		return hash(self._id)
 
 	def __eq__(self, v):
-		return self.id_ == v.id_
+		return self._id == v.id
 
 	def __ne__(self, v):
-		return self.id_ != v.id_
+		return self._id != v.id
 
+	@property
+	def id(self):
+	  return self._id
+	
+
+	#TODO: remove this after refactoring code that used metadata directly
+	@property
+	def metadata(self):
+	  return self._metadata
+	
 	## methods for dealing with wells
 
-	def get_wells(self):
-		return {Vertex.get_well(ctg) for ctg in self.metadata['contigs']}
+	def add_well(self, w, start, end):
+		ivl = (0, start, end)
+		if w not in self._metadata['wells']:
+			self._metadata['wells'][w] = ivl
+		else:
+			ivl0 = self._metadata['wells'][w]
+			self._metadata['wells'][w] = intervals.union(ivl0, ivl)
 
-	def get_head_wells(self, d=500):
-		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_starts']
-				if self.metadata['contig_starts'][ctg] < d}
+	def shift_well(self, w, shift):
+		self._metadata['wells'][w][1] += shift
+		self._metadata['wells'][w][2] += shift
 
-	def get_tail_wells(self, d=500):
+	def well_interval(self, w):
+		if w in self._metadata['wells']:
+			return self._metadata['wells'][w][1], self._metadata['wells'][w][2]
+		else:
+			return None
+
+	def set_well_interval(self, w, s, e):
+		assert w in self._metadata['wells']
+		self._metadata['wells'][w] = (0, s, e)
+
+	@property
+	def wells(self):
+	  return self._metadata['wells'].keys()
+
+	@property
+	def head_wells(self, d=500):
+		return {w for w, i in self.metadata['wells'].iteritems() if i[1] < d}
+
+	@property
+	def tail_wells(self, d=500):
 		len_v = len(self)
-		return {Vertex.get_well(ctg) for ctg in self.metadata['contig_ends']
-				if self.metadata['contig_ends'][ctg] > len_v - d}
-
-	def get_head_history(self):
-		return {ctg: dict(well=Vertex.get_well(ctg), pos=self.metadata['contig_starts'][ctg])
-				for ctg in self.metadata['contig_starts']
-				if self.metadata['contig_starts'][ctg] < 4000}
-
-	def get_tail_history(self):
-		len_v = len(self)
-		return {ctg: dict(well=Vertex.get_well(ctg), pos=len_v-self.metadata['contig_ends'][ctg]-1)
-				for ctg in self.metadata['contig_ends']
-				if self.metadata['contig_ends'][ctg] > len_v - 4000}
+		return {w for w, i in self.metadata['wells'].iteritems() if i[2] > len_v - d}
 
 	@staticmethod
 	def get_well(ctg):
@@ -125,40 +137,17 @@ class Vertex(object):
 
 	## methods for dealing with intervals
 
-	def get_true_intervals(self):
-		I = list()
-		for ctg in self.metadata['contigs']:
-			I.append(Vertex.parse_interval(ctg))
+	def add_interval(self, ivl):
+		self._metadata['intervals'].append(ivl)
+		self._merge_intervals()
 
-		if I:
-			return intervals.merge_intervals(I)
+	def shift_intervals(self, shift):
+		ivls = [(c, s+shift, e+shift) for (c,s,e) in self._metadata['intervals']]
+		self._metadata['intervals'] = ivls
 
-	def get_head_intervals(self):
-		I = list()
-		head_ctgs = [ctg for ctg in self.metadata['contigs'] 
-					 if w.metadata['contig_starts'][ctg] != -1 and \
-						w.metadata['contig_starts'][ctg] < 200 ]
-		for ctg in head_ctgs:
-			I.append(Vertex.parse_interval(w, ctg))
-
-		if I:
-			return intervals.merge_intervals(I)
-		else:
-			return list()
-
-	def get_tail_intervals(w, ctgs):
-		I = list()
-		w_len = len(w.seq)
-		tail_ctgs = [ctg for ctg in self.metadata['contigs']
-					 if w.metadata['contig_ends'][ctg] != -1 and \
-			  			w.metadata['contig_ends'][ctg] > w_len - 200 ]
-		for ctg in tail_ctgs:
-			I.append((int(chrom), start + internal_start, start + internal_start + 199))
-
-		if I:
-			return intervals.merge_intervals(I)
-		else:
-			return list()
+	@property
+	def intervals(self):
+		return self._metadata['intervals']
 
 	def print_true_intervals(self):
 		I = self.get_true_intervals()
@@ -166,28 +155,19 @@ class Vertex(object):
 		for i in merged_I:
 			print '\t', i
 
-	@staticmethod
-	def parse_interval(ctg):
-		fields = ctg.split('_')
-		chrom, coords = fields[1].split(':')
-		start, end = (int(x) for x in coords.split('-'))
-
-		# correction for how we generated the reads. bed format is 1-based
-		start -= 1
-		end -= 1
-
-		internal_start = int(fields[2])
-		return int(chrom), start + internal_start, start + internal_start + 199
+	def _merge_intervals(self):
+		I = self._metadata['intervals']
+		self._metadata['intervals'] = intervals.merge_intervals(I)
 
 class Edge(object):
 	def __init__(self, id_, v1, v2):
-		self.id_ = id_
+		self._id = id_
 		self._v1 = v1
 		self._v2 = v2
 		self.metadata = dict()
 		
 	def __eq__(self, e):
-		return self.id_ == e.id_
+		return self._id == e.id
 
 	def other_vertex(self, v):
 		if v == self.v1:
@@ -195,10 +175,14 @@ class Edge(object):
 		elif v == self.v2:
 			return self.v1
 		else:
-			raise Exception("ERROR: Vertex %d not found in v.other_vertex" % v.id_)
+			raise Exception("ERROR: Vertex %d not found in v.other_vertex" % v.id)
 
 	def __hash__(self):
-		return hash(self.id_)
+		return hash(self._id)
+
+	@property
+	def id(self):
+	  return self._id
 
 	@property
 	def v1(self):
