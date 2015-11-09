@@ -270,7 +270,7 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None):
 	with open(tsv_path) as tsv:
 		for line in tsv:
 			ctg1, ctg2, c1, c2, o, spt, d = line.strip().split()
-			if int(spt) < 5:
+			if int(spt) < 3:
 				continue
 
 			v1 = vertices_by_contig[ctg1]

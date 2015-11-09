@@ -31,10 +31,12 @@ class Graph(object):
 		self.vertices_by_id[v.id] = v
 
 	def remove_vertex(self, v):
-		for e in v.head_edges:
-			self.remove(e)
-		for e in v.tail_edges:
-			self.remove(e)
+		E_head = [e for e in v.head_edges]
+		E_tail = [e for e in v.tail_edges]
+		for e in E_head:
+			self.remove_edge(e)
+		for e in E_tail:
+			self.remove_edge(e)
 
 		self.vertices_by_id.pop(v.id)
 

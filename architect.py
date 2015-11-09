@@ -43,6 +43,10 @@ from bubbles import pop_triangles, simplify_graph, check_bubbles, \
 # resolve short repeats in the graph by using lengths
 from resolve_repeats import resolve_short_repeats
 
+from scaffolder import prune_scaffold_edges, cut_tips, \
+											 prune_scaffold_edges_via_wells, \
+											 examine_scaffold_ambiguities
+
 from libkuleshov.debug import keyboard
 from intervals import print_true_intervals
 
@@ -291,7 +295,18 @@ def scaffold(args):
 	print_stats(g)
 	contract_edges(g)
 	print_stats(g)
-	save_fasta(g, 'test.fasta')
+	save_fasta(g, 'contracted.fasta')
+	# n_cut = cut_tips(g)
+	# print '%d tips were cut.' % n_cut
+	# examine_scaffold_ambiguities(g)
+	n_pruned = prune_scaffold_edges(g)
+	print '%d edges pruned.' % n_pruned
+	n_pruned = prune_scaffold_edges_via_wells(g)
+	print '%d edges pruned via wells.' % n_pruned
+	contract_edges(g)
+	delete_spurious_edges(g, conservative='scaffold')
+	print_stats(g)
+	save_fasta(g, 'pruned.fasta')
 
 # ----------------------------------------------------------------------------
 # helpers

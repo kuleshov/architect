@@ -29,19 +29,25 @@ def spurious_connection(e, conservative='very'):
 			return False
 
 	if e.connection[v1] == 'H':
-		v1_wells = v1.get_head_wells()
+		v1_wells = v1.head_wells
 	elif e.connection[v1] == 'T':
-		v1_wells = v1.get_tail_wells()
+		v1_wells = v1.tail_wells
 	if e.connection[v2] == 'H':
-		v2_wells = v2.get_head_wells()
+		v2_wells = v2.head_wells
 	elif e.connection[v2] == 'T':
-		v2_wells = v2.get_tail_wells()
+		v2_wells = v2.tail_wells
 	# v1_wells = get_wells(v1)
 	# v2_wells = get_wells(v2)
 
 	common_wells = v1_wells & v2_wells
-	v1_fraction = len(common_wells) / float(len(v1_wells))
-	v2_fraction = len(common_wells) / float(len(v2_wells))
+	if v1_wells:
+		v1_fraction = len(common_wells) / float(len(v1_wells))
+	else:
+		v1_fraction = 0.0
+	if v2_wells:
+		v2_fraction = len(common_wells) / float(len(v2_wells))
+	else:
+		v2_fraction = 0.0
 
 	if conservative == 'very':
 		# make sure this is an "extra" edge for each vertex
@@ -342,9 +348,9 @@ def get_wells_by_edge(v, E):
 	for e in E:
 		w = e.other_vertex(v)
 		if e.connection[w] == 'H':
-			wells_by_edge[e] = w.get_head_wells()
+			wells_by_edge[e] = w.head_wells
 		elif e.connection[w] == 'T':
-			wells_by_edge[e] = w.get_tail_wells()
+			wells_by_edge[e] = w.tail_wells
 		else:
 			exit("Error.")
 
@@ -355,9 +361,9 @@ def get_wells_by_vertex(repeat_v, V):
 	for v in V:
 		e = repeat_v.edge_to_vertex(v)
 		if e.connection[v] == 'H':
-			wells_by_vertex[v] = v.get_head_wells()
+			wells_by_vertex[v] = v.head_wells
 		elif e.connection[v] == 'T':
-			wells_by_vertex[v] = v.get_tail_wells()
+			wells_by_vertex[v] = v.tail_wells
 		else:
 			exit("Error.")
 
