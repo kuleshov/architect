@@ -1,3 +1,4 @@
+import pickle
 import pysam
 
 from graph import Graph
@@ -40,6 +41,12 @@ def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None):
 		_load_containment(g, containment_path, vertices_by_contig)
 	return g
 
+def unpickle_graph(g, pickle_path):
+	with open(pickle_path, 'rb') as f:
+		g = pickle.load(f)
+
+	return g
+
 def save_graph(g, asqg_path, containment_path):
 	_write_asqg(g, asqg_path)
 	_write_containment(g, containment_path)
@@ -53,6 +60,10 @@ def save_fasta(g, fasta_file):
 		for v in g.vertices:
 			fasta.write('>' + str(v.id) + '\n')
 			fasta.write(v.seq + '\n')
+
+def pickle_graph(g, pickle_path):
+	with open(pickle_path, 'wb') as f:
+		pickle.dump(g, f)
 
 # ----------------------------------------------------------------------------
 # loading the graph

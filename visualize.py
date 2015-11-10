@@ -1,36 +1,34 @@
 import os
 import sys
 
+import intervals
 from intervals import print_true_intervals, get_true_intervals, get_head_intervals, get_tail_intervals
 from libkuleshov.dna import reverse_complement
 
-###############################################################################
-## PRINT INFORMATION FOR A VERTEX, EDGE
+# ----------------------------------------------------------------------------
+# print vertex, edge information
 
 def print_vertex(v):
 	print '================================='
 	print 'Vertex: %d' % v.id
 	print 'True intervals:', v.intervals
 	print 'wells:', ', '.join(['%d:%d-%d' % (w, v.well_interval(w)[0], v.well_interval(w)[1]) for w in v.wells])
-	T_wells = v.tail_wells
-	H_wells = v.head_wells
+	T_wells = set(v.tail_wells)
+	H_wells = set(v.head_wells)
 	print 'H:'
 	for e in v.head_edges:
 		w = e.other_vertex(v)
+		w_wells = w.head_wells if e.connection[w] == 'H' else w.tail_wells
 		wells = ', '.join(sorted(['%d:%d-%d' % (well, v.well_interval(well)[0], v.well_interval(well)[1]) 
-														for well in w.tail_wells if well in T_wells]))
-		print e.id, '\t', wells
-		# print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_ends'][ctg] > len(w) - 1000])
+														for well in w_wells if well in H_wells]))
+		print e.id, len(w_wells), wells
 	print 'T:'
 	for e in v.tail_edges:
 		w = e.other_vertex(v)
+		w_wells = w.head_wells if e.connection[w] == 'H' else w.tail_wells
 		wells = ', '.join(sorted(['%d:%d-%d' % (well, v.well_interval(well)[0], v.well_interval(well)[1]) 
-														 for well in w.head_wells if well in H_wells]))
-		print e.id, '\t', wells
-		# print_true_intervals(w, [ctg for ctg in w.metadata['contigs'] if w.metadata['contig_starts'][ctg] < 1000])
-		# for ctg in w.metadata['contigs'][:15]:
-		# 	if w.metadata['contig_ends'][ctg] < 1000:
-		# 		print_true_coordinates(w, ctg)
+														 for well in w_wells if well in T_wells]))
+		print e.id, len(w_wells), wells
 	print
 
 def print_connection(e):
@@ -85,8 +83,33 @@ def print_repeat(v, wells_by_edge):
 
 	print
 
-###############################################################################
-## VISUALIZE SUB-COMPONENTS OF THE GRAPH
+# ----------------------------------------------------------------------------
+# visualize graph sub-components
+
+def visualize_well_correctness(g):
+	for v1 in g.vertices:
+		if len(v1) < 5000: continue
+		for v2 in g.vertices:
+			if len(v2) < 5000: continue
+			if v1.id >= v2.id: continue
+			for conn1 in ('H', 'T'):
+				for conn2 in ('H', 'T'):
+					common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
+					if not v1_wells or not v2_wells: continue
+					frac_common1 = float(len(common_wells)) / float(len(v1_wells))
+					frac_common2 = float(len(common_wells)) / float(len(v2_wells))
+					if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.33 \
+																		and min(frac_common1, frac_common2) > 0.33 :
+						print
+						print '='* 80
+						print v1.id, v2.id, '%s%s' % (conn1, conn2), intervals.overlap(v1.intervals, v2.intervals)
+						print v1.id, len(v1), v1.intervals
+						print v1_wells
+						print v2.id, len(v2), v2.intervals
+						print v2_wells
+						print common_wells
+						# print_vertex(v1)
+						# print_vertex(v2)
 
 def visualize_assembly(v, I, genome):
 	print v.seq
@@ -102,8 +125,21 @@ def visualize_connection(e):
 	print v1.seq[e.ovl_start[v1]:e.ovl_end[v1]+1]
 	print v2.seq[e.ovl_start[v2]:e.ovl_end[v2]+1]
 
-###############################################################################
-## SAVE TO DOT
+
+def _get_wells_between_v(v1, v2, conn1, conn2):
+  if conn1 == 'H':
+    v1_wells = v1.head_wells
+  elif conn1 == 'T':
+    v1_wells = v1.tail_wells
+  if conn2 == 'H':
+    v2_wells = v2.head_wells
+  elif conn2 == 'T':
+    v2_wells = v2.tail_wells
+
+  return v1_wells & v2_wells, v1_wells, v2_wells
+
+# ----------------------------------------------------------------------------
+# create dot files
 
 def to_abyss_explorer_dot(g, dot_file):
 	with open(dot_file, 'w') as dot:

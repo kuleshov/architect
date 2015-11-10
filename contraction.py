@@ -14,16 +14,16 @@ def contract_edges(g, E=None):
 	remove_loops(g)
 	# remove_parallel_edges
 
+	n_contracted = 0
 	while candidate_edges:
 		if len(candidate_edges) % 10000 == 0:
 			print len(candidate_edges)
 		e = candidate_edges.pop()
-		# if e.v1.id_ == '6074-1_1044-1': keyboard()
-		E = e.v1.edges | e.v2.edges
 		if can_be_contracted(e): 
 			contract_edge(g,e)
-			# for f in E:
-				# assert len(f.connection) == 2
+			n_contracted += 1
+
+	return n_contracted
 
 def remove_loops(g):
 	for e in g.edges:

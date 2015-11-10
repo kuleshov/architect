@@ -6,9 +6,11 @@ import logging
 # get graph from SGA's asqg; then load/store from internal asqg-like format
 from graph_load import load_from_sga_asqg, load_from_asqg, \
 											 load_from_fasta_tsv, \
-											 save_graph, save_fasta
+											 save_graph, save_fasta, \
+											 unpickle_graph, pickle_graph
 
 # save file in dot format
+import visualize
 from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
          			  to_graphviz_dot_with_double_intervals, \
          			  to_graphviz_dot_with_connections, \
@@ -45,6 +47,7 @@ from resolve_repeats import resolve_short_repeats
 
 from scaffolder import prune_scaffold_edges, cut_tips, \
 											 prune_scaffold_edges_via_wells, \
+											 scaffold_via_wells, \
 											 examine_scaffold_ambiguities
 
 from libkuleshov.debug import keyboard
@@ -147,15 +150,25 @@ def main():
 	scaffold_parser.add_argument('--containment')
 	scaffold_parser.add_argument('--log')
 
+	wellscaffold_parser = subparsers.add_parser('wellwellscaffold')
+	wellscaffold_parser.set_defaults(func=wellscaffold)
+
+	wellscaffold_parser.add_argument('--pkl', required=True)
+	wellscaffold_parser.add_argument('--log')
+
 	## VIEW STATISTICS
 
 	view_parser = subparsers.add_parser('view')
 	view_parser.set_defaults(func=view)
 
-	view_parser.add_argument('--inp', required=True)
+	view_parser.add_argument('--fasta')
+	view_parser.add_argument('--edges')
+	view_parser.add_argument('--containment')
+	view_parser.add_argument('--inp')
 	view_parser.add_argument('--edge', type=int)
 	view_parser.add_argument('--vertex', type=int)
 	view_parser.add_argument('--dot')
+	view_parser.add_argument('--log')
 
 	args = parser.parse_args()
 
@@ -273,22 +286,15 @@ def bubbles(args):
         		  args.out + '.containment')
 
 def view(args):
-	g = load_from_asqg(args.inp + '.asqg', 
-        	       args.inp + '.containment')
+	# g = load_from_asqg(args.inp + '.asqg', 
+  #        	       args.inp + '.containment')
+	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
+	visualize.visualize_well_correctness(g)
 
 	if args.edge:
 		print_connection(g.get_edge(args.edge))
 	elif args.dot:
 		to_graphviz_dot_with_connections(g, try_to_resolve_new, args.dot)
-
-	# for v in g.vertices:
-	# 	if len(v.edges) > 1 and (len(v.edges) % 2) == 1:
-	# 		wells_by_edge = get_wells_by_edge(v, v.edges)
-	# 		print_repeat(v, wells_by_edge)
-
-	v = g.vertices_by_id[3754668]
-	wells_by_edge = get_wells_by_edge(v, v.edges)
-	print_repeat(v, wells_by_edge)
 
 def scaffold(args):
 	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
@@ -304,9 +310,18 @@ def scaffold(args):
 	n_pruned = prune_scaffold_edges_via_wells(g)
 	print '%d edges pruned via wells.' % n_pruned
 	contract_edges(g)
-	delete_spurious_edges(g, conservative='scaffold')
 	print_stats(g)
 	save_fasta(g, 'pruned.fasta')
+	scaffold_via_wells(g)
+	print_stats(g)
+	save_fasta(g, 'pmmp.fasta')
+	# pickle_graph(g, 'scaffolded.pkl')
+
+def wellscaffold(args):
+	g = unpickle_graph('scaffolded.pkl')
+	scaffold_via_wells(g)
+	print_stats(g)
+	save_fasta(g, 'pmmp.fasta')
 
 # ----------------------------------------------------------------------------
 # helpers

@@ -1,3 +1,11 @@
+from string_graph import ScaffoldEdge
+from contraction import contract_edges
+
+from visualize import print_vertex
+
+# ----------------------------------------------------------------------------
+# classical scaffolding
+
 def prune_scaffold_edges(g):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
   n_pruned = 0
@@ -60,6 +68,76 @@ def cut_tips(g, d=500):
   return n_cut
 
 # ----------------------------------------------------------------------------
+# well-based scaffolding
+
+def scaffold_via_wells(g):
+  # delete all existing edges from the graph
+  E = g.edges
+  for e in E:
+    g.remove_edge(e)
+
+  # create new edges whenever vertices have similar well profiles
+  n_edges = _make_wellscaff_edges(g)
+  print '%d scaffold edges created via wells.' % n_edges
+
+  # _inspect_new_edges(g)
+
+  # contract edges
+  n_contracted = contract_edges(g)
+  print '%d edges contracted.' % n_contracted
+
+def _make_wellscaff_edges(g):
+  n_edges = 0
+  for v1 in g.vertices:
+    if len(v1) < 5000: continue
+    for v2 in g.vertices:
+      if len(v2) < 5000: continue
+      if v1.id >= v2.id: continue
+      for conn1 in ('H', 'T'):
+        for conn2 in ('H', 'T'):
+          common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
+          if not v1_wells or not v2_wells: continue
+          frac_common1 = float(len(common_wells)) / float(len(v1_wells))
+          frac_common2 = float(len(common_wells)) / float(len(v2_wells))
+          if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.5 \
+                                    and min(frac_common1, frac_common2) > 0.5 :
+            ori = 0 if conn1 != conn2 else 1
+            j = g.edge_id_generator.get_id()
+            e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 3000)
+            for v in (v1, v2):
+              if e.connection[v] == 'H':
+                v.head_edges.add(e)
+              elif e.connection[v] == 'T':
+                v.tail_edges.add(e)
+              else:
+                exit('ERROR: Invalid edge connection!')
+            g.add_edge(e)
+            n_edges += 1
+
+  return n_edges
+
+# ----------------------------------------------------------------------------
+
+def _inspect_new_edges(g):
+  for e in g.edges:
+    v1, v2 = e.v1, e.v2
+
+    contractable = False
+    if e.connection[v1] == 'H' and len(v1.head_edges) == 1:
+      if e.connection[v2] == 'H' and len(v2.head_edges) == 1:
+        contractable = True
+      elif e.connection[v2] == 'T' and len(v2.tail_edges) == 1:
+        contractable = True
+    elif e.connection[v1] == 'T' and len(v1.tail_edges) == 1:
+      if e.connection[v2] == 'H' and len(v2.head_edges) == 1:
+        contractable = True
+      elif e.connection[v2] == 'T' and len(v2.tail_edges) == 1:
+        contractable = True
+
+    print
+    print e.id, v1.id, v2.id, e.connection[v1], e.connection[v2], contractable
+    print_vertex(v1)
+    print_vertex(v2)
 
 def examine_scaffold_ambiguities(g):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
@@ -148,6 +226,17 @@ def _select_edge(g, E, e_selected):
     if e != e_selected:
       g.remove_edge(e)
 
+def _get_wells_between_v(v1, v2, conn1, conn2):
+  if conn1 == 'H':
+    v1_wells = v1.head_wells
+  elif conn1 == 'T':
+    v1_wells = v1.tail_wells
+  if conn2 == 'H':
+    v2_wells = v2.head_wells
+  elif conn2 == 'T':
+    v2_wells = v2.tail_wells
+
+  return v1_wells & v2_wells, v1_wells, v2_wells
 
 def _get_common_wells(e):
   v1, v2 = e.v1, e.v2

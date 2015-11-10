@@ -21,11 +21,18 @@ def overlaps_sorted(a, b):
 	# assumes a is before b
 	return a[0] == b[0] and b[1] <= a[2]
 
-def overlaps(a, b):
+def overlap(I1, I2, tol=0):
+	for ivl1 in I1:
+		for ivl2 in I2:
+			if overlaps(ivl1, ivl2, tol):
+				return True
+	return False
+
+def overlaps(a, b, tol=0):
 	return a[0] == b[0] and \
 	(
-		(a[1] <= b[1] <= a[2]) or 
-		(b[1] <= a[1] <= b[2])
+		(a[1] - tol <= b[1] <= a[2] + tol) or 
+		(a[1] - tol <= b[2] <= a[2] + tol)
 	)
 
 def union(ivl1, ivl2):
