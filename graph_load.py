@@ -1,8 +1,8 @@
 import pickle
 import pysam
 
-from graph import Graph
-from string_graph import OverlapVertex, OverlapEdge, ScaffoldEdge, no_diedge
+from string_graph import AssemblyVertex, OverlapEdge, ScaffoldEdge, \
+												 AssemblyGraph, no_diedge
 from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
 
@@ -74,7 +74,7 @@ def _load_from_sga_asqg(asqg_path):
 	#	- no contained edges
 	#	- reads overlap at endpoints only
 
-	g = Graph()
+	g = AssemblyGraph()
 	vertices_by_contig = dict()
 
 	with open(asqg_path) as asqg:
@@ -84,7 +84,7 @@ def _load_from_sga_asqg(asqg_path):
 			## VERTEX
 			if fields[0] == ASQG_VERTEX_REC:
 				i = g.vertex_id_generator.get_id()
-				v = OverlapVertex(i, fields[2])
+				v = AssemblyVertex(i, fields[2])
 				v.metadata['contigs'] = [fields[1]]
 				v.metadata['contig_starts'] = {fields[1]: 0}
 				v.metadata['contig_ends'] = {fields[1]: len(v)-1}
@@ -148,7 +148,7 @@ def _load_from_sga_asqg(asqg_path):
 	return g, vertices_by_contig
 
 def _load_from_asqg(asqg_path):
-	g = Graph()
+	g = AssemblyGraph()
 	vertices_by_contig = dict()
 
 	with open(asqg_path) as asqg:
@@ -158,7 +158,7 @@ def _load_from_asqg(asqg_path):
 			## VERTEX
 			if fields[0] == ASQG_VERTEX_REC:
 				i = int(fields[1])
-				v = OverlapVertex(i, fields[2])
+				v = AssemblyVertex(i, fields[2])
 				vertices_by_contig[fields[1]] = v
 				g.add_vertex(v)
 
@@ -256,7 +256,7 @@ def _load_from_asqg(asqg_path):
 	return g, vertices_by_contig
 
 def _load_from_fasta(fasta_path):
-	g = Graph()
+	g = AssemblyGraph()
 	vertices_by_contig = dict()
 
 	fasta = pysam.FastaFile(fasta_path)
@@ -265,7 +265,7 @@ def _load_from_fasta(fasta_path):
 		# if i % 1000 == 0: print '%d/%d' % (i, n)
 		id_ = g.vertex_id_generator.get_id()
 		seq = fasta.fetch(ctg)
-		v = OverlapVertex(id_, seq)
+		v = AssemblyVertex(id_, seq)
 		assert ctg not in vertices_by_contig
 		vertices_by_contig[ctg] = v
 		g.add_vertex(v)

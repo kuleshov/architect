@@ -13,21 +13,86 @@ class AssemblyGraph(Graph):
 		super(AssemblyGraph, self).__init__()
 
 	# FIXME: implement this
-	def add_vertex(self):
+	def todo_add_vertex(self):
 		pass
 
 	# FIXME: implement this
-	def add_overlap_edge(self):
+	def todo_add_overlap_edge(self):
 		pass
 
 	# FIXME: implement this
-	def add_scaffold_edge(self):
+	def todo_add_scaffold_edge(self):
 		pass
 
+	def reconnect(self, e, v, new_v):
+		vgn1, vgn2 = (new_v, 'H'), (new_v, 'T')
+		assert vgn1 in self._graph and vgn2 in self._graph
 
-class OverlapVertex(Vertex):
+		w = e.other_vertex(v)
+		conn_w = e.connection[w] 
+		conn_v = e.connection[v]
+
+		old_e = ( (w, conn_w), (v, conn_v) )
+		new_e = ( (w, conn_w), (new_v, conn_v) )
+
+		self._graph.remove_edge(*old_e)
+		self._graph.add_edge(*new_e)
+
+		e.replace(v, new_v)
+
+	def flip_connection(self, e, v):
+		# update edge
+		e.flip_connection(v)
+
+		# update internal graph
+		w = e.other_vertex(v)
+		w_conn = e.connection[w]
+		new_conn = e.connection[v]
+		old_conn = 'H' if new_conn == 'T' else 'T'
+		old_e = ( (w, w_conn), (v, old_conn) )
+		new_e = ( (w, w_conn), (v, new_conn) )
+
+		assert self._graph.has_edge(*old_e)
+
+		# print 'removing', old_e
+		# print 'adding', new_e
+		
+		self._graph.remove_edge(*old_e)
+		self._graph.add_edge(*new_e)
+
+	def flip_vertex(self, v):
+		"""Moves vertex to opposite strand.
+
+		This requires:zx
+			1. Switching the connection of node edges from H to T (and vice-versa)
+			2. Reverse complementing the sequence
+			3. Exchaging head and tail edge sets
+			4. Updating the coordinates of intervals and wells
+		"""
+		for e in v.edges:
+			e.orientation = (e.orientation + 1) % 2
+			self.flip_connection(e, v)
+
+		v.seq = reverse_complement(v.seq)
+		v.head_edges, v.tail_edges = v.tail_edges, v.head_edges
+
+		v_len = len(v.seq)
+		v_wells = v.wells
+		for w in v_wells:
+			s, e = v.well_interval(w)
+			s_flipped = v_len - e
+			e_flipped = v_len - s - 1
+			v.set_well_interval(w, s_flipped, e_flipped)
+
+	def clear_vertex_loops(g, v):
+		for e in v.edges:
+			if e.v1 == e.v2:
+				g.remove_edge(e)
+				print 'weird edge removed'
+
+class AssemblyVertex(Vertex):
 	def __init__(self, id_, seq, name=None):
-		super(OverlapVertex, self).__init__(id_)
+		super(AssemblyVertex, self).__init__(id_)
 		self.seq = seq
 		self.name = name
 		self.head_edges = set() # edges that connect to the head of the segment
@@ -220,7 +285,7 @@ class ScaffoldEdge(AssemblyEdge):
 		else:
 			raise ValueError('Invalid connection type')
 
-	def shift(self, v):
+	def shift(self, v, d):
 		# nothing do do yet
 		# if we store read positions on contigs, then this will be modified
 		pass
@@ -303,8 +368,8 @@ def no_diedge(v):
 
 def test_break_vertex():
 	g = Graph()
-	v0 = OverlapVertex(g.vertex_id_generator.get_id(), 'XABCD')
-	big_v = OverlapVertex(g.vertex_id_generator.get_id(), 'ABCDEFGHIJ')
+	v0 = AssemblyVertex(g.vertex_id_generator.get_id(), 'XABCD')
+	big_v = AssemblyVertex(g.vertex_id_generator.get_id(), 'ABCDEFGHIJ')
 	big_v.metadata['contigs'] = list()
 	big_v.metadata['contig_starts'] = dict()
 	big_v.metadata['contig_ends'] = dict()
@@ -329,7 +394,7 @@ def test_break_vertex():
 	big_v.metadata['contig_starts']['c5'] = -1
 	big_v.metadata['contig_ends']['c5'] = -1
 
-	v1 = OverlapVertex(g.vertex_id_generator.get_id(), 'GHIJY')
+	v1 = AssemblyVertex(g.vertex_id_generator.get_id(), 'GHIJY')
 
 	e0 = OverlapEdge(g.edge_id_generator.get_id(), v0, big_v,
 					 1, 4, 5,
@@ -415,12 +480,12 @@ def break_vertex(v, g):
 		new_start = 10000
 
 		# create new vertices:
-		small_v = OverlapVertex(g.vertex_id_generator.get_id(), current_v.seq[:new_end+1])
+		small_v = AssemblyVertex(g.vertex_id_generator.get_id(), current_v.seq[:new_end+1])
 		small_v.metadata['contigs'] = list()
 		small_v.metadata['contig_starts'] = dict()
 		small_v.metadata['contig_ends'] = dict()
 
-		big_v = OverlapVertex(g.vertex_id_generator.get_id(), current_v.seq[new_start:])
+		big_v = AssemblyVertex(g.vertex_id_generator.get_id(), current_v.seq[new_start:])
 		big_v.metadata['contigs'] = list()
 		big_v.metadata['contig_starts'] = dict()
 		big_v.metadata['contig_ends'] = dict()

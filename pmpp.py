@@ -1,6 +1,6 @@
 import sys
 
-from string_graph import OverlapVertex, OverlapEdge
+from string_graph import AssemblyVertex, OverlapEdge
 from intervals import print_true_intervals, get_true_intervals
 from visualize import print_repeat
 
@@ -146,7 +146,7 @@ def resolve_from_vertex_pairs(v, g, pairs_to_resolve):
 		R.add(v_t)
 
 		# create new copy of repeat vertex
-		v_new = OverlapVertex(g.vertex_id_generator.get_id(), str(v.seq))
+		v_new = AssemblyVertex(g.vertex_id_generator.get_id(), str(v.seq))
 		v_new.metadata = v.metadata.copy()
 
 		# create new edges
@@ -323,7 +323,7 @@ def try_to_resolve(v, g, wells='edges'):
 			print e_tail.id_, '\t', wells
 
 def resolve(v, e_tail, e_head, g):
-	v_new = OverlapVertex(g.vertex_id_generator.get_id(), str(v.seq))
+	v_new = AssemblyVertex(g.vertex_id_generator.get_id(), str(v.seq))
 	v_new.head_edges.add(e_head)
 	v_new.tail_edges.add(e_tail)
 	g.add_vertex(v_new)

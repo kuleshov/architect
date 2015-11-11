@@ -1,3 +1,6 @@
+import networkx as nx
+
+import intervals
 from string_graph import ScaffoldEdge
 from contraction import contract_edges
 
@@ -93,6 +96,7 @@ def _make_wellscaff_edges(g):
     for v2 in g.vertices:
       if len(v2) < 5000: continue
       if v1.id >= v2.id: continue
+      if not intervals.overlap(v1.intervals, v2.intervals): continue
       for conn1 in ('H', 'T'):
         for conn2 in ('H', 'T'):
           common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
@@ -224,6 +228,7 @@ def _select_edge(g, E, e_selected):
   to_remove = [e for e in E]
   for e in to_remove:
     if e != e_selected:
+      assert e.v1 != e.v2
       g.remove_edge(e)
 
 def _get_wells_between_v(v1, v2, conn1, conn2):

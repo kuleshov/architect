@@ -1,11 +1,11 @@
 import sys
 import intervals
+import networkx as nx
 from libkuleshov.debug import keyboard
 
-###############################################################################
-## GRAPH
-## Implementation: Store dict of id->vertex. Store adjacency info in vertex
-## and edge objects.
+# ----------------------------------------------------------------------------
+# graph-related classes. internally, stores dict of id->vertex. 
+# adjacency info is in vertex and edge objects.
 
 class Graph(object):
 	def __init__(self):
@@ -15,6 +15,7 @@ class Graph(object):
 
 		self.vertex_id_generator = IdGenerator()
 		self.edge_id_generator = IdGenerator()
+		self._graph = nx.Graph()
 
 	@property
 	def vertices(self):
@@ -29,6 +30,9 @@ class Graph(object):
 
 	def add_vertex(self, v):
 		self.vertices_by_id[v.id] = v
+		vg1, vg2 = (v,'H'), (v,'T')
+		self._graph.add_nodes_from([vg1, vg2])
+		self._graph.add_edge(vg1, vg2)
 
 	def remove_vertex(self, v):
 		E_head = [e for e in v.head_edges]
@@ -38,34 +42,50 @@ class Graph(object):
 		for e in E_tail:
 			self.remove_edge(e)
 
-		self.vertices_by_id.pop(v.id)
+		self.remove_vertex_from_index(v)
 
 	def remove_vertex_from_index(self, v):
 		self.vertices_by_id.pop(v.id)
+		vg1, vg2 = (v,'H'), (v,'T')
+		self._graph.remove_node(vg1)
+		self._graph.remove_node(vg2)
 
 	def add_edge(self, e):
 		self.edges_by_id[e.id] = e
+		v1, v2 = e.v1, e.v2
+		assert v1 != v2
+		vg1 = (v1, e.connection[v1])
+		vg2 = (v2, e.connection[v2])
+		self._graph.add_edge(vg1, vg2)
 
 	def remove_edge(self, e):
 		v1, v2 = e.v1, e.v2
+
+		vg1 = (v1, e.connection[v1])
+		vg2 = (v2, e.connection[v2])
+		self._graph.remove_edge(vg1, vg2)
 		
 		self.edges_by_id.pop(e.id)
 		v1.disconnect_edge(e)
 		v2.disconnect_edge(e)
 
+	def reconnect_edge(self, e, v, w):
+		pass
+
 	def count_connected_components(self):
-		to_visit = set(self.vertices)
-		num_components = 0
+		return nx.number_connected_components(self._graph)
+		# to_visit = set(self.vertices)
+		# num_components = 0
 
-		while(to_visit):
-			edge_nodes = set([to_visit.pop()])
-			while(edge_nodes):
-				v = edge_nodes.pop()
-				to_visit.discard(v)
-				edge_nodes |= (v.neighbors & to_visit)
-			num_components += 1
+		# while(to_visit):
+		# 	edge_nodes = set([to_visit.pop()])
+		# 	while(edge_nodes):
+		# 		v = edge_nodes.pop()
+		# 		to_visit.discard(v)
+		# 		edge_nodes |= (v.neighbors & to_visit)
+		# 	num_components += 1
 
-		return num_components
+		# return num_components
 
 class Vertex(object):
 	def __init__(self, id_):

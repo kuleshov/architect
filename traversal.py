@@ -2,7 +2,7 @@ import logging
 
 from collections import deque
 
-from string_graph import OverlapVertex
+from string_graph import AssemblyVertex
 
 def compute_traversals(g):
 	# compute neighborhoods
@@ -302,7 +302,7 @@ def simplify_from_pointers(g, forward_pointers):
 				resolve_repeat(v, e_t, e_h, g)
 
 def resolve_repeat(r, e_tail, e_head, g):
-	r_new = OverlapVertex(g.vertex_id_generator.get_id(), str(r.seq))
+	r_new = AssemblyVertex(g.vertex_id_generator.get_id(), str(r.seq))
 	r_new.head_edges.add(e_head)
 	r_new.tail_edges.add(e_tail)
 	g.add_vertex(r_new)
