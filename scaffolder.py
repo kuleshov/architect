@@ -99,7 +99,8 @@ def _make_wellscaff_edges(g):
     for v2 in g.vertices:
       if len(v2) < 5000: continue
       if v1.id >= v2.id: continue
-      if not intervals.overlap(v1.intervals, v2.intervals): continue
+      # uncomment this to only connect "true edges"
+      # if not intervals.overlap(v1.intervals, v2.intervals): continue
       for conn1 in ('H', 'T'):
         for conn2 in ('H', 'T'):
           common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
@@ -107,7 +108,7 @@ def _make_wellscaff_edges(g):
           frac_common1 = float(len(common_wells)) / float(len(v1_wells))
           frac_common2 = float(len(common_wells)) / float(len(v2_wells))
           if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.5 \
-                                    and min(frac_common1, frac_common2) > 0.5 :
+                                    and min(frac_common1, frac_common2) > 0.33 :
             ori = 0 if conn1 != conn2 else 1
             j = g.edge_id_generator.get_id()
             e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 3000)

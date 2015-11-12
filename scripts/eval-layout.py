@@ -57,8 +57,8 @@ def eval_ivls(ivls):
 
   # take it as having the correct orientation
   # and look at other's contigs position w.r.t. to it
-  n_correct1, n_wrong1 = eval_ivl_seq(ivls[ix:])
-  n_correct2, n_wrong2 = eval_ivl_seq(ivls[:ix+1])
+  n_correct1, n_wrong1 = eval_ivl_seq(ivls[ix:],dir='fwd')
+  n_correct2, n_wrong2 = eval_ivl_seq(ivls[:ix+1],dir='bwd')
 
   n_correct = n_correct1 + n_correct2 - ilen(max_i)
   n_wrong = n_wrong1 + n_wrong2
@@ -72,20 +72,51 @@ def comes_after(ivl1, ivl2):
   else:
     return False
 
-def eval_ivl_seq(ivls):
+def comes_before(ivl1, ivl2):
+  if ivl1[0] != ivl2[0]: return False
+  if ivl2[2] < ivl1[2] and ivl2[1] < ivl1[2] + 5000:
+    return True
+  else:
+    return False
+
+def eval_ivl_seq(ivls, dir):
   ilen = lambda x: x[2]-x[1]
   n_correct, n_wrong = 0, 0
-  last_correct_ivl = ivls[0]
-  for i, ivl in enumerate(ivls):
-    if i == 0:
-      n_correct += ilen(ivl)
-      last_correct_ivl = ivls[0]
-      continue
-    if comes_after(last_correct_ivl, ivl):
-      last_correct_ivl = ivl
-      n_correct += ilen(ivl)
-    else:
-      n_wrong += ilen(ivl)
+  profile = []
+  if dir == 'fwd':
+    print 'F',
+    last_correct_ivl = ivls[0]
+    for i, ivl in enumerate(ivls):
+      print ivl,
+      if i == 0:
+        n_correct += ilen(ivl)
+        last_correct_ivl = ivl
+        # profile.append(('K',)
+        continue
+      if comes_after(last_correct_ivl, ivl):
+        last_correct_ivl = ivl
+        n_correct += ilen(ivl)
+        print 'K',
+      else:
+        n_wrong += ilen(ivl)
+        print 'E',
+    print n_correct, n_wrong
+  elif dir == 'bwd':
+    print 'B',
+    for i, ivl in enumerate(reversed(ivls)):
+      print ivl,
+      if i == 0:
+        n_correct += ilen(ivl)
+        last_correct_ivl = ivl
+        continue
+      if comes_before(last_correct_ivl, ivl):
+        last_correct_ivl = ivl
+        n_correct += ilen(ivl)
+        print 'K',
+      else:
+        n_wrong += ilen(ivl)
+        print 'E',
+    print n_correct, n_wrong
 
   return n_correct, n_wrong
 
@@ -98,25 +129,30 @@ with open(args.layout) as f:
     fields = line.strip().split()
     ctg = int(fields[0])
     ctg_intervals[ctg] = list()
+    cluster_len = 0
     for cstr in fields[1:]:
       ctg_fi = cstr.split(';')
       clen = int(ctg_fi[2])
       istr = ctg_fi[1]
       bp_total += clen
+      cluster_len += clen
 
       if istr:
         ivls = parse_ivl_str(istr)
         ivl = parse_intervals(ivls, clen)
         ctg_intervals[ctg].append(ivl)
 
-        n_correct1, n_wrong1 = eval_ivls(ctg_intervals[ctg])
-        n_correct2, n_wrong2 = eval_ivls(ctg_intervals[ctg][::-1])
-        if n_correct1 > n_correct2:
-          n_correct, n_wrong = n_correct1, n_wrong1
-        else:
-          n_correct, n_wrong = n_correct2, n_wrong2
-        bp_correct += n_correct
-        bp_verifiable += n_correct + n_wrong
+    n_correct, n_wrong = 0,0
+    if ctg_intervals[ctg]:
+      n_correct1, n_wrong1 = eval_ivls(ctg_intervals[ctg])
+      n_correct2, n_wrong2 = eval_ivls(ctg_intervals[ctg][::-1])
+      if n_correct1 > n_correct2:
+        n_correct, n_wrong = n_correct1, n_wrong1
+      else:
+        n_correct, n_wrong = n_correct2, n_wrong2
+    bp_correct += n_correct
+    bp_verifiable += n_correct + n_wrong
+    print cluster_len, n_correct, n_wrong
 
 print bp_correct, bp_verifiable, bp_total
 
