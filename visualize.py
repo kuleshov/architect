@@ -2,7 +2,7 @@ import os
 import sys
 
 import intervals
-from intervals import print_true_intervals, get_true_intervals, get_head_intervals, get_tail_intervals
+from intervals import get_head_intervals, get_tail_intervals
 from libkuleshov.dna import reverse_complement
 
 # ----------------------------------------------------------------------------

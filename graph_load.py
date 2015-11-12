@@ -1,6 +1,7 @@
 import pickle
 import pysam
 
+import intervals
 from string_graph import AssemblyVertex, OverlapEdge, ScaffoldEdge, \
 												 AssemblyGraph, no_diedge
 from libkuleshov.dna import reverse_complement
@@ -60,6 +61,16 @@ def save_fasta(g, fasta_file):
 		for v in g.vertices:
 			fasta.write('>' + str(v.id) + '\n')
 			fasta.write(v.seq + '\n')
+
+def save_layout(g, layout_file):
+	with open(layout_file, 'w') as out:
+		for v in g.vertices:
+			out.write('%d\t' % v.id)
+			if v.contigs:
+				v_str = '\t'.join([_ctg_str(ctg) for ctg in v.contigs])
+			else:
+				v_str = ''
+			out.write('%s\n' % v_str)
 
 def pickle_graph(g, pickle_path):
 	with open(pickle_path, 'wb') as f:
@@ -372,3 +383,8 @@ def _write_containment(g, containment_file):
 			for ctg in v.metadata['contigs']:
 				out.write('%d\t%s\t%d\t%d\n' % (v.id, ctg, v.metadata['contig_starts'].get(ctg,-1), 
 																				v.metadata['contig_ends'].get(ctg,-1)))
+
+def _ctg_str(ctg): 
+	id_, ivls, length, strand = ctg
+	ivl_str = ','.join(intervals.parse_intervals(ivls))
+	return '%d;%s;%d;%s' % (id_, ivl_str, length, strand)

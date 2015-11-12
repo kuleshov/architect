@@ -1,6 +1,5 @@
 import os
 
-from intervals import get_true_intervals
 from libkuleshov.dna import reverse_complement
 
 def load_genome():

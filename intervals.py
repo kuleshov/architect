@@ -50,26 +50,11 @@ def _merge(a, b):
 ###############################################################################
 ## PARSE INTERVALS ASSOCIATED WITH A VERTEX
 
-def parse_interval(w, ctg):
-	fields = ctg.split('_')
-	chrom, coords = fields[1].split(':')
-	start, end = (int(x) for x in coords.split('-'))
+def parse_intervals(I):
+	return [parse_interval(ivl) for ivl in I]
 
-	# correction for how we generated the reads. bed format is 1-based
-	start -= 1
-	end -= 1
-
-	internal_start = int(fields[2])
-	return int(chrom), start + internal_start, start + internal_start + 199
-
-
-def get_true_intervals(w, ctgs):
-	I = list()
-	for ctg in ctgs:
-		I.append(parse_interval(w, ctg))
-
-	if I:
-		return merge_intervals(I)
+def parse_interval(ivl):
+	return '%d:%d-%d' % ivl
 
 def get_head_intervals(w, ctgs):
 	I = list()

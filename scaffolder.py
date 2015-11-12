@@ -85,8 +85,11 @@ def scaffold_via_wells(g):
 
   # _inspect_new_edges(g)
 
+  for v in g.vertices:
+    v.initialize_contigs()
+
   # contract edges
-  n_contracted = contract_edges(g)
+  n_contracted = contract_edges(g, store_layout=True)
   print '%d edges contracted.' % n_contracted
 
 def _make_wellscaff_edges(g):

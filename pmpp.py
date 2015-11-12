@@ -1,7 +1,6 @@
 import sys
 
 from string_graph import AssemblyVertex, OverlapEdge
-from intervals import print_true_intervals, get_true_intervals
 from visualize import print_repeat
 
 # -----------------------------------------------------------------------------

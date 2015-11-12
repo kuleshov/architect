@@ -7,7 +7,7 @@ from string_graph import AssemblyVertex, no_diedge
 
 # ----------------------------------------------------------------------------
 
-def contract_edges(g, E=None):
+def contract_edges(g, E=None, store_layout=False):
   if not E:
     candidate_edges = set(g.edges)
   else:
@@ -17,12 +17,13 @@ def contract_edges(g, E=None):
   # remove_parallel_edges
 
   n_contracted = 0
+  n_tot = len(g.edges)
   while candidate_edges:
     if len(candidate_edges) % 10000 == 0:
-      print len(candidate_edges)
+      print '[contracting] %d/%d' % (n_tot - len(candidate_edges), n_tot)
     e = candidate_edges.pop()
     if can_be_contracted(e): 
-      contract_edge(g,e)
+      contract_edge(g,e,store_layout)
       n_contracted += 1
 
   return n_contracted
@@ -69,16 +70,13 @@ def can_be_contracted(e):
 
   return False
 
-def contract_edge(g,e):
+def contract_edge(g, e, store_layout=False):
   if e.is_overlap_edge:
     contract_overlap_edge(g,e)
   elif e.is_scaffold_edge:
-    # print_connection(e)
-    # print_vertex(e.v1)
-    # print_vertex(e.v2)
     v_new = contract_scaffold_edge(g,e)
-    # print_vertex(v_new)
-    # print '-' * 80
+    if store_layout:
+    	v_new.set_contigs_from_vertices(e.v1, e.v2)
   else:
     raise ValueError('Invalid edge type found')
 
@@ -143,8 +141,6 @@ def contract_scaffold_edge(g, e):
   g.remove_edge(e)
   g.remove_vertex_from_index(v1)
   g.remove_vertex_from_index(v2)
-
-  g.clear_vertex_loops(new_v)
 
   return new_v
 
@@ -215,8 +211,6 @@ def contract_overlap_edge(g, e):
   g.remove_vertex_from_index(v1)
   g.remove_vertex_from_index(v2)
   g.remove_edge(e)
-
-  g.clear_vertex_loops(new_v)
 
   return new_v
 

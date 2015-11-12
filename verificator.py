@@ -1,5 +1,4 @@
 from pmpp import spurious_connection, get_wells_by_edge
-from intervals import get_true_intervals, overlaps
 from visualize import print_connection, print_repeat
 
 # -----------------------------------------------------------------------------

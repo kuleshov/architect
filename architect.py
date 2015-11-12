@@ -6,7 +6,7 @@ import logging
 # get graph from SGA's asqg; then load/store from internal asqg-like format
 from graph_load import load_from_sga_asqg, load_from_asqg, \
 											 load_from_fasta_tsv, \
-											 save_graph, save_fasta, \
+											 save_graph, save_fasta, save_layout, \
 											 unpickle_graph, pickle_graph
 
 # save file in dot format
@@ -299,7 +299,7 @@ def view(args):
 def scaffold(args):
 	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
 	print_stats(g)
-	contract_edges(g)
+	contract_edges(g, store_layout=True)
 	print_stats(g)
 	save_fasta(g, 'contracted.fasta')
 	# n_cut = cut_tips(g)
@@ -315,6 +315,7 @@ def scaffold(args):
 	scaffold_via_wells(g)
 	print_stats(g)
 	save_fasta(g, 'pmmp.fasta')
+	save_layout(g, 'pmmp.layout')
 	# pickle_graph(g, 'scaffolded.pkl')
 
 def wellscaffold(args):

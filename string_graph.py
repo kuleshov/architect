@@ -68,6 +68,7 @@ class AssemblyGraph(Graph):
 			2. Reverse complementing the sequence
 			3. Exchaging head and tail edge sets
 			4. Updating the coordinates of intervals and wells
+			5. Update orientation of internal contigs
 		"""
 		for e in v.edges:
 			e.orientation = (e.orientation + 1) % 2
@@ -84,11 +85,7 @@ class AssemblyGraph(Graph):
 			e_flipped = v_len - s - 1
 			v.set_well_interval(w, s_flipped, e_flipped)
 
-	def clear_vertex_loops(g, v):
-		for e in v.edges:
-			if e.v1 == e.v2:
-				g.remove_edge(e)
-				print 'weird edge removed'
+		v.flip_contigs()
 
 class AssemblyVertex(Vertex):
 	def __init__(self, id_, seq, name=None):

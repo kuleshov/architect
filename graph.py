@@ -90,7 +90,8 @@ class Graph(object):
 class Vertex(object):
 	def __init__(self, id_):
 		self._id=id_
-		self._metadata = {'wells': dict(), 'intervals': list()}
+		self._metadata = {'wells': dict(), 'intervals': list(), 
+											'contigs': list()}
 		
 	def __eq__(self,v):
 		return self._id == v._id
@@ -107,7 +108,6 @@ class Vertex(object):
 	@property
 	def id(self):
 	  return self._id
-	
 
 	#TODO: remove this after refactoring code that used metadata directly
 	@property
@@ -149,7 +149,8 @@ class Vertex(object):
 	@property
 	def tail_wells(self, d=500):
 		len_v = len(self)
-		return {w for w, i in self.metadata['wells'].iteritems() if i[2] > len_v - d}
+		return { w for w, i in self.metadata['wells'].iteritems()
+						 if i[2] > len_v - d }
 
 	@staticmethod
 	def get_well(ctg):
@@ -180,6 +181,26 @@ class Vertex(object):
 	def _merge_intervals(self):
 		I = self._metadata['intervals']
 		self._metadata['intervals'] = intervals.merge_intervals(I)
+
+	## methods for dealing with internal contigs
+
+	@property
+	def contigs(self):
+	  return self._metadata['contigs']
+
+	def initialize_contigs(self):
+		self._metadata['contigs'] = [(self.id, self.intervals, len(self), 'S')]
+
+	def set_contigs_from_vertices(self, v1, v2):
+		self._metadata['contigs'] = v1.contigs + v2.contigs
+
+	def flip_contigs(self):
+		def _flip_ori(ctg):
+			new_ori = 'R' if ctg[3] == 'S' else 'S'
+			return (ctg[0], ctg[1], ctg[2], new_ori)
+
+		self._metadata['contigs'] \
+			= list(reversed([_flip_ori(ctg) for ctg in self.contigs]))
 
 class Edge(object):
 	def __init__(self, id_, v1, v2):
