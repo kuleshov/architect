@@ -80,7 +80,7 @@ def scaffold_via_wells(g):
     g.remove_edge(e)
 
   # create new edges whenever vertices have similar well profiles
-  n_edges = _make_wellscaff_edges(g)
+  n_edges = make_wellscaff_edges(g)
   print '%d scaffold edges created via wells.' % n_edges
 
   # _inspect_new_edges(g)
@@ -92,23 +92,29 @@ def scaffold_via_wells(g):
   n_contracted = contract_edges(g, store_layout=True)
   print '%d edges contracted.' % n_contracted
 
-def _make_wellscaff_edges(g):
+# def make_wellscaff_edges(g, min_commmon=3, min_thr=0.2):
+def make_wellscaff_edges(g, min_commmon=4, min_thr=0.33):
   n_edges = 0
   for v1 in g.vertices:
     if len(v1) < 5000: continue
     for v2 in g.vertices:
       if len(v2) < 5000: continue
       if v1.id >= v2.id: continue
+      # if n_edges > 10: continue
       # uncomment this to only connect "true edges"
       # if not intervals.overlap(v1.intervals, v2.intervals): continue
       for conn1 in ('H', 'T'):
         for conn2 in ('H', 'T'):
           common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
+          
           if not v1_wells or not v2_wells: continue
+          
           frac_common1 = float(len(common_wells)) / float(len(v1_wells))
           frac_common2 = float(len(common_wells)) / float(len(v2_wells))
-          if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.33 \
-                                    and min(frac_common1, frac_common2) > 0.33 :
+          
+          if len(common_wells) >= min_commmon \
+          and max(frac_common1, frac_common2) > min_thr \
+          and min(frac_common1, frac_common2) > min_thr :
             ori = 0 if conn1 != conn2 else 1
             j = g.edge_id_generator.get_id()
             e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 3000)

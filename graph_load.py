@@ -42,7 +42,7 @@ def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None):
 		_load_containment(g, containment_path, vertices_by_contig)
 	return g
 
-def unpickle_graph(g, pickle_path):
+def unpickle_graph(pickle_path):
 	with open(pickle_path, 'rb') as f:
 		g = pickle.load(f)
 
@@ -71,6 +71,28 @@ def save_layout(g, layout_file):
 			else:
 				v_str = ''
 			out.write('%s\n' % v_str)
+
+def save_gfa(g, gfa_file):
+	with open(gfa_file, 'w') as out:
+		for v in g.vertices:
+			vh, vt = v.id*2, v.id*2 + 1
+			out.write('S\t%d\t%d\t%s\t*\n' % (vh, vt, v.seq))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			id1 = 2*v1.id if e.connection[v1] == 'H' else 2*v1.id+1
+			id2 = 2*v2.id if e.connection[v2] == 'H' else 2*v2.id+1
+			out.write('L\t%d\t%d\t3000N\n' % (id1, id2))
+
+def save_bandage_gfa(g, gfa_file):
+	with open(gfa_file, 'w') as out:
+		for v in g.vertices:
+			vh, vt = '%s+' % v.id, '%s-' % v.id
+			out.write('S\t%s\t%s\t%s\t*\n' % (vh, vt, v.seq))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			conn1 = '+' if e.connection[v1] == 'H' else '-'
+			conn2 = '+' if e.connection[v2] == 'H' else '-'
+			out.write('L\t%d\t%s\t%d\t%s\t3000N\n' % (v1.id, conn1, v2.id, conn2))
 
 def pickle_graph(g, pickle_path):
 	with open(pickle_path, 'wb') as f:
@@ -112,7 +134,7 @@ def _load_from_sga_asqg(asqg_path):
 				v2_ovl_start 	= int(fields[6])
 				v2_ovl_end 		= int(fields[7])
 				v2_len 			= int(fields[8])
-				v2_orientation 	= int(fields[9])
+				orientation 	= int(fields[9])
 
 				# basic sanity checking:
 				# if int(fields[10]) != 0: print "WARNING: Non-perfect overlap found"
@@ -126,9 +148,9 @@ def _load_from_sga_asqg(asqg_path):
 					# exit("ERROR: Contained read found")
 
 				# do the reads actually ovelap?
-				if v2_orientation == 0:
+				if orientation == 0:
 					assert (v1.seq[v1_ovl_start:v1_ovl_end+1] == v2.seq[v2_ovl_start:v2_ovl_end+1])
-				elif v2_orientation == 1:
+				elif orientation == 1:
 					assert v1.seq[v1_ovl_start:v1_ovl_end+1] == \
 						reverse_complement(v2.seq[v2_ovl_start:v2_ovl_end+1])
 					# keyboard()
@@ -137,7 +159,7 @@ def _load_from_sga_asqg(asqg_path):
 
 				j = g.edge_id_generator.get_id()
 
-				e = OverlapEdge(j, v1, v2, v1_ovl_start, v1_ovl_end, v1_len, v2_ovl_start, v2_ovl_end, v2_len, v2_orientation)
+				e = OverlapEdge(j, v1, v2, v1_ovl_start, v1_ovl_end, v1_len, v2_ovl_start, v2_ovl_end, v2_len, orientation)
 
 				g.add_edge(e)
 
@@ -183,7 +205,7 @@ def _load_from_asqg(asqg_path):
 				v2_ovl_start 	= int(fields[6])
 				v2_ovl_end 		= int(fields[7])
 				v2_len 			= int(fields[8])
-				v2_orientation 	= int(fields[9])
+				orientation 	= int(fields[9])
 
 				# basic sanity checking:
 				# if int(fields[10]) != 0: print "WARNING: Non-perfect overlap found"
@@ -197,9 +219,9 @@ def _load_from_asqg(asqg_path):
 					# exit("ERROR: Contained read found")
 
 				# do the reads actually ovelap?
-				if v2_orientation == 0:
+				if orientation == 0:
 					assert (v1.seq[v1_ovl_start:v1_ovl_end+1] == v2.seq[v2_ovl_start:v2_ovl_end+1])
-				elif v2_orientation == 1:
+				elif orientation == 1:
 					assert v1.seq[v1_ovl_start:v1_ovl_end+1] == \
 						reverse_complement(v2.seq[v2_ovl_start:v2_ovl_end+1])
 					# keyboard()
@@ -239,7 +261,7 @@ def _load_from_asqg(asqg_path):
 
 				j = g.edge_id_generator.get_id()
 
-				e = OverlapEdge(j, v1, v2, v1_ovl_start, v1_ovl_end, v1_len, v2_ovl_start, v2_ovl_end, v2_len, v2_orientation)
+				e = OverlapEdge(j, v1, v2, v1_ovl_start, v1_ovl_end, v1_len, v2_ovl_start, v2_ovl_end, v2_len, orientation)
 
 				g.add_edge(e)
 
@@ -372,17 +394,25 @@ def _write_asqg(g, asqg_file):
 			asqg.write('VT\t%d\t%s\n' % (v.id, v.seq))
 		for e in g.edges:
 			v1, v2 = e.v1, e.v2
-			asqg.write('ED\t{v1}\t{v2}\t{v1os}\t{v1oe}\t{v1l}\t{v2os}\t{v2oe}\t{v2l}\t{ori}\n'.format
-				(v1=v1.id, v2=v2.id, 
-				 v1os=e.ovl_start[v1], v1oe=e.ovl_end[v1], v1l=len(v1), 
-				 v2os=e.ovl_start[v2], v2oe=e.ovl_end[v2], v2l=len(v2), ori=e.v2_orientation))
+			if e.is_overlap_edge:
+				asqg.write('ED\t{v1}\t{v2}\t{v1os}\t{v1oe}\t{v1l}\t{v2os}\t{v2oe}\t{v2l}\t{ori}\n'.format
+					(v1=v1.id, v2=v2.id, 
+					 v1os=e.ovl_start[v1], v1oe=e.ovl_end[v1], v1l=len(v1), 
+					 v2os=e.ovl_start[v2], v2oe=e.ovl_end[v2], v2l=len(v2), ori=e.orientation))
+			elif e.is_scaffold_edge:
+				asqg.write('ED\t{v1}\t{v2}\t{v1os}\t{v1oe}\t{v1l}\t{v2os}\t{v2oe}\t{v2l}\t{ori}\n'.format
+					(v1=v1.id, v2=v2.id, 
+					 v1os=0, v1oe=0, v1l=len(v1), 
+					 v2os=0, v2oe=0, v2l=len(v2), ori=e.orientation))
 
 def _write_containment(g, containment_file):
 	with open(containment_file, 'w') as out:
 		for v in g.vertices:
-			for ctg in v.metadata['contigs']:
-				out.write('%d\t%s\t%d\t%d\n' % (v.id, ctg, v.metadata['contig_starts'].get(ctg,-1), 
-																				v.metadata['contig_ends'].get(ctg,-1)))
+			for w in v.wells:
+				s, e = v.well_interval[0], v.well_interval[1]
+				out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_WELL_REC, v.id, w, s, e))
+			for ivl in v.intervals:
+				out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_IVL_REC, v.id, ivl[0], ivl[1], ivl[2]))
 
 def _ctg_str(ctg): 
 	id_, ivls, length, strand = ctg

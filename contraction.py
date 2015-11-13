@@ -86,8 +86,8 @@ def contract_scaffold_edge(g, e):
   assert e in v1.edges
   assert e in v2.edges
 
-  vg1 = (v1, e.connection[v1])
-  vg2 = (v2, e.connection[v2])
+  vg1 = (v1.id, e.connection[v1])
+  vg2 = (v2.id, e.connection[v2])
   assert g._graph.has_edge(vg1, vg2)
 
   _orient_th(g, e, v1, v2)

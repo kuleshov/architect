@@ -2,11 +2,12 @@
 import sys
 import argparse
 import logging
+import pickle
 
 # get graph from SGA's asqg; then load/store from internal asqg-like format
 from graph_load import load_from_sga_asqg, load_from_asqg, \
 											 load_from_fasta_tsv, \
-											 save_graph, save_fasta, save_layout, \
+											 save_graph, save_fasta, save_layout, save_bandage_gfa, \
 											 unpickle_graph, pickle_graph
 
 # save file in dot format
@@ -49,6 +50,7 @@ from scaffolder import prune_scaffold_edges, cut_tips, \
 											 prune_scaffold_edges_via_wells, \
 											 scaffold_via_wells, \
 											 examine_scaffold_ambiguities
+from graph_algorithms import scaffold_via_wells_mst
 
 from libkuleshov.debug import keyboard
 from intervals import print_true_intervals
@@ -289,6 +291,11 @@ def view(args):
 	# g = load_from_asqg(args.inp + '.asqg', 
   #        	       args.inp + '.containment')
 	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
+	pickle_path = './test.pkl'
+	with open(pickle_path, 'wb') as f:
+		pickle.dump(g, f)
+	with open(pickle_path, 'rb') as f:
+		g = pickle.load(f)
 	visualize.visualize_well_correctness(g)
 
 	if args.edge:
@@ -312,11 +319,13 @@ def scaffold(args):
 	contract_edges(g)
 	print_stats(g)
 	save_fasta(g, 'pruned.fasta')
-	scaffold_via_wells(g)
+	# scaffold_via_wells(g)
+	scaffold_via_wells_mst(g)
 	print_stats(g)
 	save_fasta(g, 'pmmp.fasta')
 	save_layout(g, 'pmmp.layout')
 	# pickle_graph(g, 'scaffolded.pkl')
+	save_bandage_gfa(g, 'pmmp.gfa')
 
 def wellscaffold(args):
 	g = unpickle_graph('scaffolded.pkl')

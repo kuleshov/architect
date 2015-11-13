@@ -25,15 +25,15 @@ class AssemblyGraph(Graph):
 		pass
 
 	def reconnect(self, e, v, new_v):
-		vgn1, vgn2 = (new_v, 'H'), (new_v, 'T')
+		vgn1, vgn2 = (new_v.id, 'H'), (new_v.id, 'T')
 		assert vgn1 in self._graph and vgn2 in self._graph
 
 		w = e.other_vertex(v)
 		conn_w = e.connection[w] 
 		conn_v = e.connection[v]
 
-		old_e = ( (w, conn_w), (v, conn_v) )
-		new_e = ( (w, conn_w), (new_v, conn_v) )
+		old_e = ( (w.id, conn_w), (v.id, conn_v) )
+		new_e = ( (w.id, conn_w), (new_v.id, conn_v) )
 
 		self._graph.remove_edge(*old_e)
 		self._graph.add_edge(*new_e)
@@ -49,8 +49,8 @@ class AssemblyGraph(Graph):
 		w_conn = e.connection[w]
 		new_conn = e.connection[v]
 		old_conn = 'H' if new_conn == 'T' else 'T'
-		old_e = ( (w, w_conn), (v, old_conn) )
-		new_e = ( (w, w_conn), (v, new_conn) )
+		old_e = ( (w.id, w_conn), (v.id, old_conn) )
+		new_e = ( (w.id, w_conn), (v.id, new_conn) )
 
 		assert self._graph.has_edge(*old_e)
 
@@ -88,10 +88,10 @@ class AssemblyGraph(Graph):
 		v.flip_contigs()
 
 class AssemblyVertex(Vertex):
-	def __init__(self, id_, seq, name=None):
+	def __init__(self, id_, seq):
 		super(AssemblyVertex, self).__init__(id_)
+		self._id = id_
 		self.seq = seq
-		self.name = name
 		self.head_edges = set() # edges that connect to the head of the segment
 		self.tail_edges = set() # edges that connect to the tail of the segment
 
