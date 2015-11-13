@@ -3,6 +3,8 @@
 
 import argparse
 
+from libkuleshov.stats import n50
+
 # ----------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser()
@@ -57,13 +59,15 @@ def eval_ivls(ivls):
 
   # take it as having the correct orientation
   # and look at other's contigs position w.r.t. to it
-  n_correct1, n_wrong1 = eval_ivl_seq(ivls[ix:],dir='fwd')
-  n_correct2, n_wrong2 = eval_ivl_seq(ivls[:ix+1],dir='bwd')
+  n_correct1, n_wrong1, profile1 = eval_ivl_seq(ivls[ix:],dir='fwd')
+  n_correct2, n_wrong2, profile2 = eval_ivl_seq(ivls[:ix+1],dir='bwd')
 
   n_correct = n_correct1 + n_correct2 - ilen(max_i)
   n_wrong = n_wrong1 + n_wrong2
+  print profile1, profile2
+  profile = profile2 + profile1[1:]
 
-  return n_correct, n_wrong
+  return n_correct, n_wrong, profile
 
 def comes_after(ivl1, ivl2):
   if ivl1[0] != ivl2[0]: return False
@@ -91,14 +95,16 @@ def eval_ivl_seq(ivls, dir):
       if i == 0:
         n_correct += ilen(ivl)
         last_correct_ivl = ivl
-        # profile.append(('K',)
+        profile.append('K')
         continue
       if comes_after(last_correct_ivl, ivl):
         last_correct_ivl = ivl
         n_correct += ilen(ivl)
+        profile.append('K')
         print 'K',
       else:
         n_wrong += ilen(ivl)
+        profile.append('E')
         print 'E',
     print n_correct, n_wrong
   elif dir == 'bwd':
@@ -108,53 +114,96 @@ def eval_ivl_seq(ivls, dir):
       if i == 0:
         n_correct += ilen(ivl)
         last_correct_ivl = ivl
+        profile = ['K']
         continue
       if comes_before(last_correct_ivl, ivl):
         last_correct_ivl = ivl
         n_correct += ilen(ivl)
+        profile = ['K'] + profile
         print 'K',
       else:
         n_wrong += ilen(ivl)
+        profile = ['E'] + profile
         print 'E',
     print n_correct, n_wrong
 
-  return n_correct, n_wrong
+  return n_correct, n_wrong, profile
 
 bp_total = 0
 bp_verifiable = 0
 bp_correct = 0
-ctg_intervals = dict()
+profiles = list()
 with open(args.layout) as f:
   for line in f:
     fields = line.strip().split()
-    ctg = int(fields[0])
-    ctg_intervals[ctg] = list()
+    cluster_id = int(fields[0])
+    cluster_ivls = list()
     cluster_len = 0
+
+    all_lengths = list()
+    all_ids = list()
+    verifiable_ids = list()
+
     for cstr in fields[1:]:
       ctg_fi = cstr.split(';')
+      cid = int(ctg_fi[0])
       clen = int(ctg_fi[2])
       istr = ctg_fi[1]
       bp_total += clen
       cluster_len += clen
 
+      all_ids.append(cid)
+      all_lengths.append(clen)
+
       if istr:
+        verifiable_ids.append(cid)
         ivls = parse_ivl_str(istr)
         ivl = parse_intervals(ivls, clen)
-        ctg_intervals[ctg].append(ivl)
+        cluster_ivls.append(ivl)
 
     n_correct, n_wrong = 0,0
-    if ctg_intervals[ctg]:
-      n_correct1, n_wrong1 = eval_ivls(ctg_intervals[ctg])
-      n_correct2, n_wrong2 = eval_ivls(ctg_intervals[ctg][::-1])
+    if cluster_ivls:
+      print cluster_ivls
+      n_correct1, n_wrong1, profile1 = eval_ivls(cluster_ivls)
+      n_correct2, n_wrong2, profile2 = eval_ivls(cluster_ivls[::-1])
+      print 'p1', profile1
+      print 'p2', profile2
       if n_correct1 > n_correct2:
-        n_correct, n_wrong = n_correct1, n_wrong1
+        n_correct, n_wrong, profile = n_correct1, n_wrong1, profile1
       else:
-        n_correct, n_wrong = n_correct2, n_wrong2
+        n_correct, n_wrong, profile = n_correct2, n_wrong2, profile2[::-1]
     bp_correct += n_correct
     bp_verifiable += n_correct + n_wrong
+    profile_dict = dict(zip(verifiable_ids, profile))
+    full_profile = [(cid, clen, profile_dict.get(cid,'N'))
+                   for cid, clen in zip(all_ids, all_lengths)]
+    profiles.append(full_profile)
     print cluster_len, n_correct, n_wrong
 
 print bp_correct, bp_verifiable, bp_total
+
+# n50 calculations
+bp_total = 0
+uncorrected_lengths = \
+  [sum([clen for (cid, clen, cprof) in profile]) for profile in profiles]
+lengths = list()
+for profile in profiles:
+  bp_total += sum([clen for (cid, clen, cprof) in profile])
+  curr_len = 0
+  for _, clen, cprof in profile:
+    if cprof in ('K', 'N'):
+      curr_len += clen
+    elif cprof == 'E':
+      if curr_len:
+        lengths.append(curr_len)
+      curr_len = 0
+      lengths.append(clen)
+
+  if curr_len:
+    lengths.append(curr_len)
+
+print bp_total, n50(uncorrected_lengths), n50(lengths)
+
 
 
 
