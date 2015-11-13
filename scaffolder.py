@@ -107,7 +107,7 @@ def _make_wellscaff_edges(g):
           if not v1_wells or not v2_wells: continue
           frac_common1 = float(len(common_wells)) / float(len(v1_wells))
           frac_common2 = float(len(common_wells)) / float(len(v2_wells))
-          if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.5 \
+          if len(common_wells) >= 4 and max(frac_common1, frac_common2) > 0.33 \
                                     and min(frac_common1, frac_common2) > 0.33 :
             ori = 0 if conn1 != conn2 else 1
             j = g.edge_id_generator.get_id()

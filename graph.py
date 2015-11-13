@@ -74,18 +74,10 @@ class Graph(object):
 
 	def count_connected_components(self):
 		return nx.number_connected_components(self._graph)
-		# to_visit = set(self.vertices)
-		# num_components = 0
-
-		# while(to_visit):
-		# 	edge_nodes = set([to_visit.pop()])
-		# 	while(edge_nodes):
-		# 		v = edge_nodes.pop()
-		# 		to_visit.discard(v)
-		# 		edge_nodes |= (v.neighbors & to_visit)
-		# 	num_components += 1
-
-		# return num_components
+	
+	@property
+	def nxgraph(self):
+	  return self._graph
 
 class Vertex(object):
 	def __init__(self, id_):
