@@ -8,6 +8,7 @@ import pickle
 from graph_load import load_from_sga_asqg, load_from_asqg, \
 											 load_from_fasta_tsv, \
 											 save_graph, save_fasta, save_layout, save_bandage_gfa, \
+											 save_to_fasta_tsv, \
 											 unpickle_graph, pickle_graph
 
 # save file in dot format
@@ -49,7 +50,8 @@ from resolve_repeats import resolve_short_repeats
 from scaffolder import prune_scaffold_edges, cut_tips, \
 											 prune_scaffold_edges_via_wells, \
 											 scaffold_via_wells, \
-											 examine_scaffold_ambiguities
+											 examine_scaffold_ambiguities, \
+											 make_wellscaff_edges
 from graph_algorithms import scaffold_via_wells_mst
 
 from libkuleshov.debug import keyboard
@@ -291,11 +293,9 @@ def view(args):
 	# g = load_from_asqg(args.inp + '.asqg', 
   #        	       args.inp + '.containment')
 	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
-	pickle_path = './test.pkl'
-	with open(pickle_path, 'wb') as f:
-		pickle.dump(g, f)
-	with open(pickle_path, 'rb') as f:
-		g = pickle.load(f)
+	save_to_fasta_tsv(g, 'test.fasta', 'test.tsv', 'test.containment')
+	g = load_from_fasta_tsv('test.fasta', 'test.tsv', 'test.containment')
+
 	visualize.visualize_well_correctness(g)
 
 	if args.edge:
@@ -304,23 +304,39 @@ def view(args):
 		to_graphviz_dot_with_connections(g, try_to_resolve_new, args.dot)
 
 def scaffold(args):
-	g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
+	if False:
+		g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
+		print_stats(g)
+		contract_edges(g, store_layout=True)
+		print_stats(g)
+		save_fasta(g, 'contracted.fasta')
+		# n_cut = cut_tips(g)
+		# print '%d tips were cut.' % n_cut
+		# examine_scaffold_ambiguities(g)
+		n_pruned = prune_scaffold_edges(g)
+		print '%d edges pruned.' % n_pruned
+		n_pruned = prune_scaffold_edges_via_wells(g)
+		print '%d edges pruned via wells.' % n_pruned
+		contract_edges(g)
+		print_stats(g)
+		save_fasta(g, 'pruned.fasta')
+		
+		# delete all existing edges from the graph
+		E = g.edges
+		for e in E:
+			g.remove_edge(e)
+
+		# create new edges whenever vertices have similar well profiles
+		n_edges = make_wellscaff_edges(g)
+		print '%d scaffold edges created via wells.' % n_edges
+
+		save_to_fasta_tsv(g, 'wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment')
+
+	g = load_from_fasta_tsv('wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment',
+													min_supp=1)
 	print_stats(g)
-	contract_edges(g, store_layout=True)
-	print_stats(g)
-	save_fasta(g, 'contracted.fasta')
-	# n_cut = cut_tips(g)
-	# print '%d tips were cut.' % n_cut
-	# examine_scaffold_ambiguities(g)
-	n_pruned = prune_scaffold_edges(g)
-	print '%d edges pruned.' % n_pruned
-	n_pruned = prune_scaffold_edges_via_wells(g)
-	print '%d edges pruned via wells.' % n_pruned
-	contract_edges(g)
-	print_stats(g)
-	save_fasta(g, 'pruned.fasta')
-	# scaffold_via_wells(g)
-	scaffold_via_wells_mst(g)
+	scaffold_via_wells(g)
+	# scaffold_via_wells_mst(g)
 	print_stats(g)
 	save_fasta(g, 'pmmp.fasta')
 	save_layout(g, 'pmmp.layout')

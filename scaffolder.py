@@ -73,7 +73,7 @@ def cut_tips(g, d=500):
 # ----------------------------------------------------------------------------
 # well-based scaffolding
 
-def scaffold_via_wells(g):
+def full_scaffold_via_wells(g):
   # delete all existing edges from the graph
   E = g.edges
   for e in E:
@@ -85,15 +85,32 @@ def scaffold_via_wells(g):
 
   # _inspect_new_edges(g)
 
+  scaffold_via_wells(g)
+
+def scaffold_via_wells(g, min_common=4, min_thr=0.33):
   for v in g.vertices:
     v.initialize_contigs()
+
+  for e in g.edges:
+    v1, v2 = e.v1, e.v2
+    conn1, conn2, = e.connection[v1], e.connection[v2]
+    common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
+
+    if len(common_wells) < min_common:
+      g.remove_edge(e)
+      continue
+    
+    all_wells = v1_wells | v2_wells
+    frac_common = float(len(common_wells)) / float(len(all_wells))
+    if frac_common < min_thr:
+      g.remove_edge(e)
 
   # contract edges
   n_contracted = contract_edges(g, store_layout=True)
   print '%d edges contracted.' % n_contracted
 
-# def make_wellscaff_edges(g, min_commmon=3, min_thr=0.2):
-def make_wellscaff_edges(g, min_commmon=4, min_thr=0.33):
+# def make_wellscaff_edges(g, min_common=3, min_thr=0.2):
+def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
   n_edges = 0
   for v1 in g.vertices:
     if len(v1) < 5000: continue
@@ -106,15 +123,18 @@ def make_wellscaff_edges(g, min_commmon=4, min_thr=0.33):
       for conn1 in ('H', 'T'):
         for conn2 in ('H', 'T'):
           common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)
-          
+
           if not v1_wells or not v2_wells: continue
           
-          frac_common1 = float(len(common_wells)) / float(len(v1_wells))
-          frac_common2 = float(len(common_wells)) / float(len(v2_wells))
+          # frac_common1 = float(len(common_wells)) / float(len(v1_wells))
+          # frac_common2 = float(len(common_wells)) / float(len(v2_wells))
+          all_wells = v1_wells | v2_wells
+          frac_common = float(len(common_wells)) / float(len(all_wells))
           
-          if len(common_wells) >= min_commmon \
-          and max(frac_common1, frac_common2) > min_thr \
-          and min(frac_common1, frac_common2) > min_thr :
+          # if len(common_wells) >= min_common \
+          # and max(frac_common1, frac_common2) > min_thr \
+          # and min(frac_common1, frac_common2) > min_thr :
+          if len(common_wells) >= min_common  and frac_common > min_thr:
             ori = 0 if conn1 != conn2 else 1
             j = g.edge_id_generator.get_id()
             e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 3000)
@@ -266,3 +286,23 @@ def _get_common_wells(e):
     v2_wells = v2.tail_wells
 
   return v1_wells & v2_wells
+
+def _resolve_repeats_via_wells(g):
+  sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
+  n_pruned = 0
+  for v in sorted_v:
+    # look at the head side
+    if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
+      supported_edges = [e for e in v.head_edges if len(_get_common_wells(e)) >= 4]
+      if len(supported_edges) == 1:
+        n_pruned += len(v.head_edges) - 1
+        _select_edge(g, v.head_edges, supported_edges[0])  
+
+    # look at the tail side
+    if len(v.tail_edges) >= 2 and all(e.is_scaffold_edge for e in v.tail_edges):
+      supported_edges = [e for e in v.tail_edges if len(_get_common_wells(e)) >= 4]
+      if len(supported_edges) == 1:
+        n_pruned += len(v.tail_edges) - 1
+        _select_edge(g, v.tail_edges, supported_edges[0])
+
+  return n_pruned

@@ -18,6 +18,8 @@ TSV_LEFT = 'L'
 TSV_RIGHT = 'R'
 TSV_SAME = 'S'
 TSV_REVERSE = 'R'
+TSV_TYPE_OVL = 'O'
+TSV_TYPE_SCA = 'S'
 
 CTMT_WELL_REC = 'W'
 CTMT_IVL_REC = 'R'
@@ -35,9 +37,9 @@ def load_from_asqg(asqg_path, containment_path=None):
 		_load_containment(g, containment_path, vertices_by_contig)
 	return g
 
-def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None):
+def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None, min_supp=3):
 	g, vertices_by_contig = _load_from_fasta(fasta_path)
-	_load_edges_from_tsv(g, tsv_path, vertices_by_contig)
+	_load_edges_from_tsv(g, tsv_path, vertices_by_contig, min_supp)
 	if containment_path:
 		_load_containment(g, containment_path, vertices_by_contig)
 	return g
@@ -45,15 +47,15 @@ def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None):
 def unpickle_graph(pickle_path):
 	with open(pickle_path, 'rb') as f:
 		g = pickle.load(f)
-
 	return g
 
 def save_graph(g, asqg_path, containment_path):
 	_write_asqg(g, asqg_path)
 	_write_containment(g, containment_path)
 
-def save_graph_to_fasta(g, fasta_path, containment_path):
+def save_to_fasta_tsv(g, fasta_path, tsv_path, containment_path):
 	_write_fasta(g, fasta_path)
+	_write_edge_tsv(g, tsv_path)
 	_write_containment(g, containment_path)
 
 def save_fasta(g, fasta_file):
@@ -307,15 +309,13 @@ def _load_from_fasta(fasta_path):
 
 	return g, vertices_by_contig
 
-def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None):
+def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None, min_supp=3):
 	if not vertices_by_contig:
 		vertices_by_contig = {v.id : v for v in g.vertices}
 
 	with open(tsv_path) as tsv:
 		for line in tsv:
-			ctg1, ctg2, c1, c2, o, spt, d = line.strip().split()
-			if int(spt) < 3:
-				continue
+			type_, ctg1, ctg2, c1, c2, o, spt, d = line.strip().split()
 
 			v1 = vertices_by_contig[ctg1]
 			v2 = vertices_by_contig[ctg2]
@@ -341,11 +341,22 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None):
 			else:
 				raise ValueError('Invalid orientation value in .tsv')
 
-			j = g.edge_id_generator.get_id()
-			# FIXME: user proper distance
-			e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 25)
-			# e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, int(d))
-			e.support = int(spt)
+			if type_ == TSV_TYPE_SCA:
+				if int(spt) < min_supp:
+					continue
+
+				j = g.edge_id_generator.get_id()
+				# FIXME: user proper distance
+				e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 25)
+				# e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, int(d))
+				e.support = int(spt)
+
+			elif type_ == TSV_TYPE_OVL:
+				#FIXME: need to implement this
+				raise ValueError('Parsing of overlap edges in TSV not implemented')
+
+			else:
+				raise ValueError('Invalid edge type found: %s' % type_)
 
 			g.add_edge(e)
 
@@ -405,11 +416,28 @@ def _write_asqg(g, asqg_file):
 					 v1os=0, v1oe=0, v1l=len(v1), 
 					 v2os=0, v2oe=0, v2l=len(v2), ori=e.orientation))
 
+def _write_edge_tsv(g, tsv_file):
+	with open(tsv_file, 'w') as tsv:
+		for e in g.edges:
+			if e.is_scaffold_edge:
+				vid1, vid2 = e.v1.id, e.v2.id
+				vc1 = TSV_LEFT if e.connection[e.v1] == 'H' else TSV_RIGHT
+				vc2 = TSV_LEFT if e.connection[e.v2] == 'H' else TSV_RIGHT
+				ori = TSV_SAME if e.orientation == 1 else TSV_REVERSE
+				spt, dis = e.support, e.distance
+				tsv.write('%s\t%d\t%d\t%s\t%s\t%s\t%d\t%d\n' % 
+					(TSV_TYPE_SCA, vid1, vid2, vc1, vc2, ori, spt, dis))
+
+def _write_fasta(g, fasta_file):
+	with open(fasta_file, 'w') as fasta:
+		for v in g.vertices:
+			fasta.write('>%d\n%s\n' % (v.id, v.seq))
+
 def _write_containment(g, containment_file):
 	with open(containment_file, 'w') as out:
 		for v in g.vertices:
 			for w in v.wells:
-				s, e = v.well_interval[0], v.well_interval[1]
+				s, e = v.well_interval(w)
 				out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_WELL_REC, v.id, w, s, e))
 			for ivl in v.intervals:
 				out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_IVL_REC, v.id, ivl[0], ivl[1], ivl[2]))

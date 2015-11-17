@@ -25,6 +25,9 @@ class Graph(object):
 	def edges(self):
 		return self.edges_by_id.values()
 
+	def vertex_from_id(self, vid):
+		return self.vertices_by_id[vid]
+
 	def get_edge(self, id_):
 		return self.edges_by_id[id_]
 
@@ -56,10 +59,7 @@ class Graph(object):
 		assert v1 != v2
 		vg1 = (v1.id, e.connection[v1])
 		vg2 = (v2.id, e.connection[v2])
-		self._graph.add_edge(
-			vg1, vg2, 
-			weight=_edge_weight(v1, v2, e.connection[v1], e.connection[v2])
-		)
+		self._graph.add_edge(vg1, vg2)
 
 	def remove_edge(self, e):
 		v1, v2 = e.v1, e.v2
@@ -104,10 +104,7 @@ class Vertex(object):
 
 	@property
 	def id(self):
-		try:
-			return self._my_id
-		except AttributeError:
-			print self.__dict__
+		return self._my_id
 
 	#TODO: remove this after refactoring code that used metadata directly
 	@property
@@ -206,6 +203,7 @@ class Vertex(object):
 
 class Edge(object):
 	def __init__(self, id_, v1, v2):
+		super(Edge, self).__init__()
 		self._id = id_
 		self._v1 = v1
 		self._v2 = v2
@@ -256,34 +254,3 @@ class IdGenerator:
 
 	def set_counter(self, n):
 		self.counter = n
-
-# ----------------------------------------------------------------------------
-# helpers
-
-def _edge_weight(v1, v2, conn1, conn2):
-  if conn1 == 'H':
-    v1_wells = v1.head_wells
-  elif conn1 == 'T':
-    v1_wells = v1.tail_wells
-  if conn2 == 'H':
-    v2_wells = v2.head_wells
-  elif conn2 == 'T':
-    v2_wells = v2.tail_wells
-
-  common_wells = v1_wells & v2_wells
-
-  if not v1_wells or not v2_wells: 
-    return 0.
-
-  frac_common1 = float(len(common_wells)) / float(len(v1_wells))
-  frac_common2 = float(len(common_wells)) / float(len(v2_wells))
-
-  if min(frac_common1, frac_common2) < 0.33: 
-    return 0.
-
-  weight = _transfer_fn(min(frac_common1, frac_common2))
-
-  return weight
-
-def _transfer_fn(fraction):
-  return 1./(1.01-fraction) - 1.
