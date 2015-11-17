@@ -327,7 +327,7 @@ def scaffold(args):
 			g.remove_edge(e)
 
 		# create new edges whenever vertices have similar well profiles
-		n_edges = make_wellscaff_edges(g)
+		n_edges = make_wellscaff_edges(g, min_common=3, min_thr=0.2)
 		print '%d scaffold edges created via wells.' % n_edges
 
 		save_to_fasta_tsv(g, 'wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment')
@@ -335,7 +335,7 @@ def scaffold(args):
 	g = load_from_fasta_tsv('wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment',
 													min_supp=1)
 	print_stats(g)
-	scaffold_via_wells(g)
+	scaffold_via_wells(g, min_common=3, min_thr=0.2)
 	# scaffold_via_wells_mst(g)
 	print_stats(g)
 	save_fasta(g, 'pmmp.fasta')

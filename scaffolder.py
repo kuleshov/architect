@@ -102,8 +102,10 @@ def scaffold_via_wells(g, min_common=4, min_thr=0.33):
     
     all_wells = v1_wells | v2_wells
     frac_common = float(len(common_wells)) / float(len(all_wells))
-    if frac_common < min_thr:
+    if frac_common < min_thr or (len(common_wells) < 4 and frac_common < 0.5):
       g.remove_edge(e)
+
+  _resolve_repeats_via_wells(g)
 
   # contract edges
   n_contracted = contract_edges(g, store_layout=True)
@@ -287,22 +289,29 @@ def _get_common_wells(e):
 
   return v1_wells & v2_wells
 
+def _frac_common(e):
+  v1, v2 = e.v1, e.v2
+  conn1, conn2, = e.connection[v1], e.connection[v2]
+  common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)  
+  all_wells = v1_wells | v2_wells
+  return float(len(common_wells)) / float(len(all_wells))
+
 def _resolve_repeats_via_wells(g):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
   n_pruned = 0
   for v in sorted_v:
     # look at the head side
     if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
-      supported_edges = [e for e in v.head_edges if len(_get_common_wells(e)) >= 4]
-      if len(supported_edges) == 1:
+      sorted_edges = sorted([(_frac_common(e),e) for e in v.head_edges], reverse=True)
+      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
         n_pruned += len(v.head_edges) - 1
-        _select_edge(g, v.head_edges, supported_edges[0])  
+        _select_edge(g, v.head_edges, sorted_edges[0][1])  
 
     # look at the tail side
     if len(v.tail_edges) >= 2 and all(e.is_scaffold_edge for e in v.tail_edges):
-      supported_edges = [e for e in v.tail_edges if len(_get_common_wells(e)) >= 4]
-      if len(supported_edges) == 1:
+      sorted_edges = sorted([(_frac_common(e),e) for e in v.tail_edges], reverse=True)
+      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
         n_pruned += len(v.tail_edges) - 1
-        _select_edge(g, v.tail_edges, supported_edges[0])
+        _select_edge(g, v.tail_edges, sorted_edges[0][1])  
 
   return n_pruned

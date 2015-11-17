@@ -10,6 +10,7 @@ def print_stats(g, stats_file=sys.stdout):
   stats.write("Edges: %d\n" % len(g.edges))
   stats.write("Connected components: %d\n" % g.count_connected_components())
   stats.write("N50: %d\n" % graph_n50(g))
+  stats.write("Idealized N50: %d\n" % g.idealized_n50())
   stats.write("Average contig length: %d\n" % graph_avg(g))
 
   if stats != sys.stdout:

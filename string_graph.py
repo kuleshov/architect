@@ -6,6 +6,7 @@ from graph import Vertex, Edge, Graph
 from libkuleshov.misc import reverse_string
 from libkuleshov.dna import reverse_complement
 from libkuleshov.debug import keyboard
+from libkuleshov.stats import n50
 
 class AssemblyGraph(Graph):
 	"""Graph structure storing genome assembly."""
@@ -86,6 +87,24 @@ class AssemblyGraph(Graph):
 			v.set_well_interval(w, s_flipped, e_flipped)
 
 		v.flip_contigs()
+
+	def idealized_n50(self):
+		to_visit = set(self.vertices)
+		num_components = 0
+		sizes = list()
+
+		while(to_visit):
+			edge_nodes = set([to_visit.pop()])
+			component_v = list()
+			while(edge_nodes):
+				v = edge_nodes.pop()
+				to_visit.discard(v)
+				component_v.append(v)
+				edge_nodes |= (v.neighbors & to_visit)
+			sizes.append(sum([len(v) for v in component_v]))
+			num_components += 1
+
+		return n50(sizes)
 
 class AssemblyVertex(Vertex):
 	def __init__(self, id_, seq):
