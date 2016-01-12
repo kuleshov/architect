@@ -40,6 +40,8 @@ def load_from_asqg(asqg_path, containment_path=None):
 def load_from_fasta_tsv(fasta_path, tsv_path, containment_path=None, min_supp=3):
 	g, vertices_by_contig = _load_from_fasta(fasta_path)
 	_load_edges_from_tsv(g, tsv_path, vertices_by_contig, min_supp)
+	for e in g.edges:
+		assert e in e.v1.edges and e in e.v2.edges
 	if containment_path:
 		_load_containment(g, containment_path, vertices_by_contig)
 	return g
@@ -342,6 +344,18 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None, min_supp=3):
 				raise ValueError('Invalid orientation value in .tsv')
 
 			if type_ == TSV_TYPE_SCA:
+				# if edge already exists, add to count
+				if v1 in v2.neighbors:
+					e_prev = v1.edge_to_vertex(v2)
+					if e_prev.connection[v1] == conn1 \
+					and e_prev.connection[v2] == conn2:
+						print 'WARNING: Dupplicate records indicating edge ' \
+								  'between %d (%s), %d (%s); ' \
+								  'summing counts.' % (v1.id, ctg1, v2.id, ctg2)
+						e.support += int(spt)
+						continue
+
+				# otherwise, it's a new edge
 				if int(spt) < min_supp:
 					continue
 
@@ -380,9 +394,13 @@ def _load_containment(g, containment_file, vertices_by_contig=None):
 		for line in in_:
 			fields = line.split()
 
-			v = vertices_by_contig.get(fields[1], None)
+			# FIXME: uncomment this
+			# if '_' in fields[1]:
+			# 	print "WARNING: '_' found in contig name; expect undefiend behavior"
+			name = fields[1].split('_')[0]
+			v = vertices_by_contig.get(name, None)
 			if not v:
-				print 'WARNING: Vertex not found:', fields[1]
+				print 'WARNING: Vertex not found:', name
 				continue
 			
 			if fields[0] == CTMT_WELL_REC:

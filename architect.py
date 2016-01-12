@@ -330,6 +330,11 @@ def scaffold(args):
 		n_edges = make_wellscaff_edges(g, min_common=3, min_thr=0.2)
 		print '%d scaffold edges created via wells.' % n_edges
 
+		for e in g.edges:
+			if not (e.v1 in g.vertices and e.v2 in g.vertices):
+				print e.id, e.v1.id, e.v2.id
+			assert e.v1 in g.vertices and e.v2 in g.vertices
+
 		save_to_fasta_tsv(g, 'wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment')
 
 	g = load_from_fasta_tsv('wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment',

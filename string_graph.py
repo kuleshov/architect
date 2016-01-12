@@ -195,6 +195,14 @@ class AssemblyEdge(Edge):
 	def flip(self):
 		""" Flips edge from H->T to T->H and vice versa. """
 		self.v1, self.v2 = self.v2, self.v1
+
+	def other_vertex(self, v):
+		if v == self.v1:
+			return self.v2
+		elif v == self.v2:
+			return self.v1
+		else:
+			raise ValueError('Vertex not found')
 		
 class OverlapEdge(AssemblyEdge):
 	def __init__(self, id_, v1, v2, 

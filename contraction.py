@@ -22,7 +22,7 @@ def contract_edges(g, E=None, store_layout=False):
     if len(candidate_edges) % 10000 == 0:
       print '[contracting] %d/%d' % (n_tot - len(candidate_edges), n_tot)
     e = candidate_edges.pop()
-    if can_be_contracted(e): 
+    if can_be_contracted(e, g): 
       contract_edge(g,e,store_layout)
       n_contracted += 1
 
@@ -47,11 +47,24 @@ def remove_parallel_edges(g):
       e.v1.disconnect_edge(e)
       e.v2.disconnect_edge(e)
 
-def can_be_contracted(e):
+def can_be_contracted(e, g):
   v1, v2 = e.v1, e.v2
+
+  # edge may have been deleted earlier
+  if e not in g.edges:
+    return False
 
   # we cannot contract loops:
   if v1 == v2: return False
+
+  # for f in v1.edges:
+  #   if f != e and v2 == f.other_vertex(v1):
+  #     print 'WARNING: length-2 loop found!'
+  #     return False
+
+  # some checks
+  assert e in v1.edges
+  assert e in v2.edges
 
   # an edge can be contracted if it connects v1, v2 at poles x, y
   # and it is the only edge at pole x in v1
@@ -83,8 +96,27 @@ def contract_edge(g, e, store_layout=False):
 def contract_scaffold_edge(g, e):
   v1, v2 = e.v1, e.v2
 
+  # if there are any other edges parallel edges, delete them
+  for f in v1.edges:
+    if f != e and v2 == f.other_vertex(v1):
+      g.remove_edge(f)
+
   assert e in v1.edges
   assert e in v2.edges
+
+  # print '---'
+  # print e.id, v1.id, v2.id
+
+  # print
+  # for f in v1.edges:
+  #   print f.id, f.v1.id, f.v2.id, f.connection[v1]
+
+  # print
+  # for f in v2.edges:
+  #   print f.id, f.v1.id, f.v2.id, f.connection[v2]
+
+  # store set of edges that will be removed (for verificaiton later)
+  good_E = [f for f in v1.edges if f != e] + [f for f in v2.edges if f != e]
 
   vg1 = (v1.id, e.connection[v1])
   vg2 = (v2.id, e.connection[v2])
@@ -141,6 +173,13 @@ def contract_scaffold_edge(g, e):
   g.remove_edge(e)
   g.remove_vertex_from_index(v1)
   g.remove_vertex_from_index(v2)
+
+  for f in good_E:
+    if f not in new_v.edges:
+      print f.id, f.v1.id, f.v2.id
+    if f in g.edges:
+      assert f.v1 in g.vertices, f.v2 in g.vertices
+    assert f in new_v.edges
 
   return new_v
 
