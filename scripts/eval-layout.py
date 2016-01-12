@@ -172,13 +172,13 @@ with open(args.layout) as f:
         n_correct, n_wrong, profile = n_correct1, n_wrong1, profile1
       else:
         n_correct, n_wrong, profile = n_correct2, n_wrong2, profile2[::-1]
-    bp_correct += n_correct
-    bp_verifiable += n_correct + n_wrong
-    profile_dict = dict(zip(verifiable_ids, profile))
-    full_profile = [(cid, clen, profile_dict.get(cid,'N'))
-                   for cid, clen in zip(all_ids, all_lengths)]
-    profiles.append(full_profile)
-    print cluster_len, n_correct, n_wrong
+      bp_correct += n_correct
+      bp_verifiable += n_correct + n_wrong
+      profile_dict = dict(zip(verifiable_ids, profile))
+      full_profile = [(cid, clen, profile_dict.get(cid,'N'))
+                     for cid, clen in zip(all_ids, all_lengths)]
+      profiles.append(full_profile)
+      print cluster_len, n_correct, n_wrong
 
 print bp_correct, bp_verifiable, bp_total
 
