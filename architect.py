@@ -304,9 +304,19 @@ def view(args):
 		to_graphviz_dot_with_connections(g, try_to_resolve_new, args.dot)
 
 def scaffold(args):
-	if False:
+	if True:
 		g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
 		print_stats(g)
+
+		# delete small vertices
+		n_removed = 0
+		for v in g.vertices:
+			if len(v.seq) < 400:
+				g.remove_vertex(v)
+				n_removed += 1
+		print 'Removed %d vertices' % n_removed
+		print_stats(g)
+
 		contract_edges(g, store_layout=True)
 		print_stats(g)
 		save_fasta(g, 'contracted.fasta')

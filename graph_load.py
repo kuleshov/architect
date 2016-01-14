@@ -301,7 +301,7 @@ def _load_from_fasta(fasta_path):
 	for i, ctg in enumerate(fasta.references):
 		# if i % 1000 == 0: print '%d/%d' % (i, n)
 		id_ = g.vertex_id_generator.get_id()
-		seq = fasta.fetch(ctg)
+		seq = fasta.fetch(ctg).upper()
 		v = AssemblyVertex(id_, seq)
 		assert ctg not in vertices_by_contig
 		vertices_by_contig[ctg] = v

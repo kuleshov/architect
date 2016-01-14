@@ -17,14 +17,17 @@ def contract_edges(g, E=None, store_layout=False):
   # remove_parallel_edges
 
   n_contracted = 0
+  n_seen = 0
   n_tot = len(g.edges)
   while candidate_edges:
-    if len(candidate_edges) % 10000 == 0:
-      print '[contracting] %d/%d' % (n_tot - len(candidate_edges), n_tot)
+    if n_seen % 10000 == 0:
+      print '[contracting] %d/%d (%d contracted)' % (n_seen, n_tot, 
+                                                     n_contracted)
     e = candidate_edges.pop()
     if can_be_contracted(e, g): 
       contract_edge(g,e,store_layout)
       n_contracted += 1
+    n_seen += 1
 
   return n_contracted
 
@@ -51,8 +54,8 @@ def can_be_contracted(e, g):
   v1, v2 = e.v1, e.v2
 
   # edge may have been deleted earlier
-  if e not in g.edges:
-    return False
+  # if e not in g.edges:
+    # return False
 
   # we cannot contract loops:
   if v1 == v2: return False
@@ -63,8 +66,8 @@ def can_be_contracted(e, g):
   #     return False
 
   # some checks
-  assert e in v1.edges
-  assert e in v2.edges
+  # assert e in v1.edges
+  # assert e in v2.edges
 
   # an edge can be contracted if it connects v1, v2 at poles x, y
   # and it is the only edge at pole x in v1
