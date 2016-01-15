@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-b', '--bam', required=True)
 parser.add_argument('-c', '--containment', required=True)
 parser.add_argument('-t', '--threshold', type=int, default=75)
+parser.add_argument('-s', '--shift', type=int, default=0)
 # parser.add_argument('-m', '--map', required=True)
 
 args = parser.parse_args()
@@ -62,7 +63,7 @@ for read in samfile:
     continue
 
   name = read.qname
-  well = int(name.split('_')[0][4:])
+  well = int(name.split('_')[0][4:]) + args.shift
   # t = ':'.join(name.split(':')[3:])
   # if t not in well_map: continue
   # well = well_map[t]
