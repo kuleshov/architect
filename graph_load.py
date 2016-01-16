@@ -397,7 +397,8 @@ def _load_containment(g, containment_file, vertices_by_contig=None):
 			# FIXME: uncomment this
 			# if '_' in fields[1]:
 			# 	print "WARNING: '_' found in contig name; expect undefiend behavior"
-			name = fields[1].split('_')[0]
+			# name = fields[1].split('_')[0]
+			name = fields[1]
 			v = vertices_by_contig.get(name, None)
 			if not v:
 				print 'WARNING: Vertex not found:', name
