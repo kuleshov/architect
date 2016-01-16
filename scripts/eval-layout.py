@@ -133,8 +133,11 @@ bp_total = 0
 bp_verifiable = 0
 bp_correct = 0
 profiles = list()
+n_total = 0
+errors = 0
 with open(args.layout) as f:
   for line in f:
+    n_total += 1
     fields = line.strip().split()
     cluster_id = int(fields[0])
     cluster_ivls = list()
@@ -177,6 +180,7 @@ with open(args.layout) as f:
       profile_dict = dict(zip(verifiable_ids, profile))
       full_profile = [(cid, clen, profile_dict.get(cid,'N'))
                      for cid, clen in zip(all_ids, all_lengths)]
+      errors += len([1 for (x,y,z) in full_profile if z == 'E'])
       profiles.append(full_profile)
       print cluster_len, n_correct, n_wrong
 
@@ -202,7 +206,7 @@ for profile in profiles:
   if curr_len:
     lengths.append(curr_len)
 
-print bp_total, n50(uncorrected_lengths), n50(lengths)
+print n_total, errors, bp_total, n50(uncorrected_lengths), n50(lengths)
 
 
 
