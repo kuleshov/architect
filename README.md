@@ -18,7 +18,7 @@ Architect takes as input:
 * A mapping of read clouds to contigs in `bam` format.
 * Optionally, an aligment of paired-end reads to the contigs.
 
-## Evaluation
+## Results
 
 We used Architect to assemble the genomes of *D. melanogaster* and *C. elegans* as well as two gut metgenomic datasets.
 Architect took as input standard short read assemblies augmented with raw short reads cloud based on the Illumina TSLRs technology that were subsampled to various depths.
@@ -26,3 +26,22 @@ We found that the scaffolder produced up to 5x improvements in contig contiguity
 
 We will be posting a tutorial and several demos to this page on the week of Februrary 8th.
 
+## Usage
+
+Architect is run as follows.
+
+```
+usage: architect.py scaffold [-h] --fasta FASTA --edges EDGES
+                             [--containment CONTAINMENT] [--log LOG]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --fasta FASTA
+  --edges EDGES
+  --containment CONTAINMENT
+  --log LOG
+```
+
+A `containment` file encodes container hits in the genome. The `edges` file encodes paired-end read information. The `fasta` file contains the pre-assembled contigs.
+
+The input files are generated from `bam` aligments using their corresponding scripts in the `/bam` folder.
