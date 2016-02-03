@@ -20,7 +20,7 @@ Architect takes as input:
 
 ## Evaluation
 
-We used Architect to assemble the genomes of *D. melanogaster* and *C. elegans* as well as two gut metgenmic datasets.
+We used Architect to assemble the genomes of *D. melanogaster* and *C. elegans* as well as two gut metgenomic datasets.
 Architect took as input standard short read assemblies augmented with raw short reads cloud based on the Illumina TSLRs technology that were subsampled to various depths.
 We found that the scaffolder produced up to 5x improvements in contig contiguity without increasing the misassembly rate, and using between 4-20x less sequencing data.
 
