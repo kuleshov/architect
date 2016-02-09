@@ -18,14 +18,6 @@ Architect takes as input:
 * A mapping of read clouds to contigs in `bam` format.
 * Optionally, an aligment of paired-end reads to the contigs.
 
-## Results
-
-We used Architect to assemble the genomes of *D. melanogaster* and *C. elegans* as well as two gut metgenomic datasets.
-Architect took as input standard short read assemblies augmented with raw short reads cloud based on the Illumina TSLRs technology that were subsampled to various depths.
-We found that the scaffolder produced up to 5x improvements in contig contiguity without increasing the misassembly rate, and using between 4-20x less sequencing data.
-
-We will be posting a tutorial and several demos to this page on the week of Februrary 8th.
-
 ## Usage
 
 Architect is run as follows.
@@ -45,3 +37,9 @@ optional arguments:
 A `containment` file encodes container hits in the genome. The `edges` file encodes paired-end read information. The `fasta` file contains the pre-assembled contigs.
 
 The input files are generated from `bam` aligments using their corresponding scripts in the `/bam` folder.
+
+## Results
+
+We used Architect to assemble the genomes of *D. melanogaster* and *C. elegans* as well as two gut metgenomic datasets.
+Architect took as input standard short read assemblies augmented with raw short reads cloud based on the Illumina TSLRs technology that were subsampled to various depths.
+We found that the scaffolder produced up to 5x improvements in contig contiguity without increasing the misassembly rate, and using between 4-20x less sequencing data.
