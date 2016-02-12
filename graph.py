@@ -1,7 +1,6 @@
 import sys
 import intervals
 import networkx as nx
-from libkuleshov.debug import keyboard
 
 # ----------------------------------------------------------------------------
 # graph-related classes. internally, stores dict of id->vertex. 
