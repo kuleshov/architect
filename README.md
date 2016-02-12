@@ -23,15 +23,20 @@ Architect takes as input:
 Architect is run as follows.
 
 ```
-usage: architect.py scaffold [-h] --fasta FASTA --edges EDGES
-                             [--containment CONTAINMENT] [--log LOG]
+usage: architect.py scaffold [-h] --fasta FASTA --edges EDGES --containment
+                             CONTAINMENT --out OUT [--min-ctg-len MIN_CTG_LEN]
+                             [--log LOG]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --fasta FASTA
-  --edges EDGES
+  --fasta FASTA         Input scaffolds/contigs
+  --edges EDGES         Known paired-end or overlap connections
   --containment CONTAINMENT
-  --log LOG
+                        Container hits and various meta-data
+  --out OUT             Prefix for the ouput files
+  --min-ctg-len MIN_CTG_LEN
+                        Discard contigs smaller than this length (def: 0)
+  --log LOG             Save stdout to log file
 ```
 
 A `containment` file encodes container hits in the genome. The `edges` file encodes paired-end read information. The `fasta` file contains the pre-assembled contigs.
