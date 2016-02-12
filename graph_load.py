@@ -4,8 +4,8 @@ import pysam
 import intervals
 from string_graph import AssemblyVertex, OverlapEdge, ScaffoldEdge, \
 												 AssemblyGraph, no_diedge
-from libkuleshov.dna import reverse_complement
-from libkuleshov.debug import keyboard
+
+from common import reverse_complement
 
 # ----------------------------------------------------------------------------
 # constants

@@ -4,8 +4,6 @@ import networkx as nx
 from scaffolder import make_wellscaff_edges #, contract_edges
 from contraction import contract_edges
 
-from libkuleshov.debug import keyboard
-
 # ----------------------------------------------------------------------------
 
 def full_scaffold_via_wells_mst(g):

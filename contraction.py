@@ -1,8 +1,7 @@
 import intervals
 from visualize import print_vertex, print_connection
 
-from libkuleshov.dna import reverse_complement
-from libkuleshov.debug import keyboard
+from common import reverse_complement
 from string_graph import AssemblyVertex, no_diedge
 
 # ----------------------------------------------------------------------------

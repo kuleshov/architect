@@ -21,9 +21,6 @@ from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
 # visualize parts of assembly graph
 from visualize import print_connection, print_repeat
 
-# examine misassemblies
-from misassemblies import examine_misassemblies
-
 # collect statistics about the graph
 from graph_stats import print_stats
 
@@ -175,8 +172,6 @@ def save_optional_output(g, args):
 		to_graphviz_dot_with_intervals(g, args.dot)
 	if args.stats:
 		print_stats(g, args.stats)
-	if args.masm:
-		examine_misassemblies(g)
 
 
 if __name__ == '__main__':

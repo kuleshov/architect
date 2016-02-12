@@ -3,10 +3,7 @@ import sys
 from bisect import bisect_left, bisect_right
 from graph import Vertex, Edge, Graph
 
-from libkuleshov.misc import reverse_string
-from libkuleshov.dna import reverse_complement
-from libkuleshov.debug import keyboard
-from libkuleshov.stats import n50
+from common import *
 
 class AssemblyGraph(Graph):
 	"""Graph structure storing genome assembly."""

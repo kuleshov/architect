@@ -3,8 +3,6 @@
 
 import argparse
 
-from libkuleshov.stats import n50
-
 # ----------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser()
@@ -12,6 +10,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-l', '--layout', required=True)
 
 args = parser.parse_args()
+
+# ----------------------------------------------------------------------------
+
+def n50(l):
+  total_length = sum(l)
+  half_length = total_length / 2
+  length = 0
+
+  l.sort(reverse=True)
+
+  while length < half_length:
+    x = l.pop()
+    length += x
+    # print "%d/%d" % (length, total_length)
+
+  return x
 
 # ----------------------------------------------------------------------------
 

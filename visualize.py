@@ -3,7 +3,7 @@ import sys
 
 import intervals
 from intervals import get_head_intervals, get_tail_intervals
-from libkuleshov.dna import reverse_complement
+from common import reverse_complement
 
 # ----------------------------------------------------------------------------
 # print vertex, edge information
