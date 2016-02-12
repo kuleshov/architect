@@ -11,7 +11,7 @@ def print_stats(g, stats_file=sys.stdout):
   stats.write("Connected components: %d\n" % g.count_connected_components())
   stats.write("N50: %d\n" % graph_n50(g))
   stats.write("Idealized N50: %d\n" % g.idealized_n50())
-  stats.write("Average contig length: %d\n" % graph_avg(g))
+  stats.write("Total/Average contig length: %d\t%d\n" % graph_avg(g))
 
   if stats != sys.stdout:
     stats.close()
@@ -21,7 +21,7 @@ def graph_n50(g):
 
 def graph_avg(g):
 	L = [len(v) for v  in g.vertices]
-	return float(sum(L)) / len(L)
+	return float(sum(L)) / len(L), sum(L)
 
 # ----------------------------------------------------------------------------
 # helpers

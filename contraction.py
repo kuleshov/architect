@@ -8,6 +8,17 @@ from string_graph import AssemblyVertex, no_diedge
 # ----------------------------------------------------------------------------
 
 def contract_edges(g, E=None, store_layout=False):
+  for w in g.vertices:
+    for f in w.edges:
+      if not (w == f.v1 or w == f.v2):
+        print '???', w.id, f.id, f.v2.id, f.v2.id
+      assert w == f.v1 or w == f.v2
+
+  all_V = set(g.vertices)
+  for f in g.edges:
+    assert f.v1 in all_V and f.v2 in all_V
+
+
   if not E:
     candidate_edges = set(g.edges)
   else:
@@ -101,6 +112,9 @@ def contract_scaffold_edge(g, e):
 
   # if there are any other edges parallel edges, delete them
   for f in v1.edges:
+    if not (v1 == f.v1 or v1 == f.v2):
+      print '!!!', v1.id, f.id, f.v1.id, f.v2.id, len(f.v1.seq), len(f.v2.seq)
+    assert v1 == f.v1 or v1 == f.v2
     if f != e and v2 == f.other_vertex(v1):
       g.remove_edge(f)
 
@@ -120,6 +134,8 @@ def contract_scaffold_edge(g, e):
 
   # store set of edges that will be removed (for verificaiton later)
   good_E = [f for f in v1.edges if f != e] + [f for f in v2.edges if f != e]
+  good_V = [f.other_vertex(v1) for f in v1.edges if f != e] \
+         + [f.other_vertex(v2) for f in v2.edges if f != e]
 
   vg1 = (v1.id, e.connection[v1])
   vg2 = (v2.id, e.connection[v2])
@@ -183,6 +199,18 @@ def contract_scaffold_edge(g, e):
     if f in g.edges:
       assert f.v1 in g.vertices, f.v2 in g.vertices
     assert f in new_v.edges
+
+  for w in good_V:
+    for f in w.edges:
+      if not (w == f.v1 or w == f.v2):
+        print '...', w.id, f.id, f.v2.id, f.v2.id
+      assert w == f.v1 or w == f.v2
+
+  for f in new_v.edges:
+    if not (new_v == f.v1 or new_v == f.v2):
+      print ',,,', new_v.id, f.id, f.v2.id, f.v2.id
+    assert new_v == f.v1 or new_v == f.v2
+
 
   return new_v
 
