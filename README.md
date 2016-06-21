@@ -1,6 +1,8 @@
 Architect
 =========
 
+**NOTE**: We will be releasing the full version of Architect immediately before ISMB. We suggest waiting until then before using the program. Until then, this repo has a demo that can reproduce results from the paper.
+
 Architect is a genomic scaffolder aimed at synthetic long read and read-cloud sequencing technologies
 such as Illumina Tru-Seq synthetic long reads or the 10X GemCode platform.
 
