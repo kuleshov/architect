@@ -6,7 +6,7 @@ Architect
 ***
 
 Architect is a genomic scaffolder aimed at synthetic long read and read-cloud sequencing technologies
-such as Illumina Tru-Seq synthetic long reads or the 10X GemCode platform.
+such as Illumina Tru-Seq or the 10X platform.
 
 ## Requirements
 
