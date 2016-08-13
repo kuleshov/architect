@@ -1,3 +1,8 @@
+"""Helper functions for analyzing the assembly graph. 
+
+These may be helpful to debug or examine assemblies.
+"""
+
 import os
 import sys
 
@@ -9,7 +14,6 @@ from common import reverse_complement
 # print vertex, edge information
 
 def print_vertex(v):
-	print '================================='
 	print 'Vertex: %d' % v.id
 	print 'True intervals:', v.intervals
 	print 'wells:', ', '.join(['%d:%d-%d' % (w, v.well_interval(w)[0], v.well_interval(w)[1]) for w in v.wells])
@@ -42,10 +46,7 @@ def print_connection(e):
 		v2_wells = v2.head_wells
 	elif e.connection[v2] == 'T':
 		v2_wells = v2.tail_wells
-	# v1_wells = get_wells(v1)
-	# v2_wells = get_wells(v2)
 
-	print '================================'
 	if e.is_overlap_edge:
 		print 'Edge %d: v1 overlap: %d %d %s, v2 overlap: %d %d %s, ori: %d' \
 		% (e.id, e.ovl_start[v1], e.ovl_end[v1], e.connection[v1],
@@ -59,7 +60,6 @@ def print_connection(e):
 	print 'V2 wells:', ','.join(sorted([str(w) for w in v2_wells]))
 
 def print_repeat(v, wells_by_edge):
-	print '================================'
 	print 'Vertex %d: %d contigs, %d bp' % (v.id, len(v.metadata['contigs']), len(v))
 	print_true_intervals(v, v.metadata['contigs'])
 	print 'V_wells:', ','.join([str(well) for well in v.get_wells()])

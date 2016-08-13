@@ -73,21 +73,7 @@ def cut_tips(g, d=500):
 # ----------------------------------------------------------------------------
 # well-based scaffolding
 
-def full_scaffold_via_wells(g):
-  # delete all existing edges from the graph
-  E = g.edges
-  for e in E:
-    g.remove_edge(e)
-
-  # create new edges whenever vertices have similar well profiles
-  n_edges = make_wellscaff_edges(g)
-  print '%d scaffold edges created via wells.' % n_edges
-
-  # _inspect_new_edges(g)
-
-  scaffold_via_wells(g)
-
-def scaffold_via_wells(g, min_common=4, min_thr=0.33):
+def prune_via_wells(g, min_common=4, min_thr=0.33):
   for v in g.vertices:
     v.initialize_contigs()
 
@@ -105,13 +91,10 @@ def scaffold_via_wells(g, min_common=4, min_thr=0.33):
     if frac_common < min_thr or (len(common_wells) < 4 and frac_common < 0.5):
       g.remove_edge(e)
 
-  _resolve_repeats_via_wells(g)
+  n_pruned = _resolve_repeats_via_wells(g)
 
-  # contract edges
-  n_contracted = contract_edges(g, store_layout=True)
-  print '%d edges contracted.' % n_contracted
+  return n_pruned
 
-# def make_wellscaff_edges(g, min_common=3, min_thr=0.2):
 def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
   n_edges = 0
   for v1 in g.vertices:
@@ -119,7 +102,6 @@ def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
     for v2 in g.vertices:
       if len(v2) < 5000: continue
       if v1.id >= v2.id: continue
-      # if n_edges > 10: continue
       # uncomment this to only connect "true edges"
       # if not intervals.overlap(v1.intervals, v2.intervals): continue
       for conn1 in ('H', 'T'):
@@ -153,8 +135,72 @@ def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
   return n_edges
 
 # ----------------------------------------------------------------------------
+# helpers
 
-def _inspect_new_edges(g):
+def _select_edge(g, E, e_selected):
+  to_remove = [e for e in E]
+  for e in to_remove:
+    if e != e_selected:
+      assert e.v1 != e.v2
+      g.remove_edge(e)
+
+def _get_wells_between_v(v1, v2, conn1, conn2):
+  if conn1 == 'H':
+    v1_wells = v1.head_wells
+  elif conn1 == 'T':
+    v1_wells = v1.tail_wells
+  if conn2 == 'H':
+    v2_wells = v2.head_wells
+  elif conn2 == 'T':
+    v2_wells = v2.tail_wells
+
+  return v1_wells & v2_wells, v1_wells, v2_wells
+
+def _get_common_wells(e):
+  v1, v2 = e.v1, e.v2
+
+  if e.connection[v1] == 'H':
+    v1_wells = v1.head_wells
+  elif e.connection[v1] == 'T':
+    v1_wells = v1.tail_wells
+  if e.connection[v2] == 'H':
+    v2_wells = v2.head_wells
+  elif e.connection[v2] == 'T':
+    v2_wells = v2.tail_wells
+
+  return v1_wells & v2_wells
+
+def _frac_common(e):
+  v1, v2 = e.v1, e.v2
+  conn1, conn2, = e.connection[v1], e.connection[v2]
+  common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)  
+  all_wells = v1_wells | v2_wells
+  return float(len(common_wells)) / float(len(all_wells))
+
+def _resolve_repeats_via_wells(g):
+  sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
+  n_pruned = 0
+  for v in sorted_v:
+    # look at the head side
+    if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
+      sorted_edges = sorted([(_frac_common(e),e) for e in v.head_edges], reverse=True)
+      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
+        n_pruned += len(v.head_edges) - 1
+        _select_edge(g, v.head_edges, sorted_edges[0][1])  
+
+    # look at the tail side
+    if len(v.tail_edges) >= 2 and all(e.is_scaffold_edge for e in v.tail_edges):
+      sorted_edges = sorted([(_frac_common(e),e) for e in v.tail_edges], reverse=True)
+      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
+        n_pruned += len(v.tail_edges) - 1
+        _select_edge(g, v.tail_edges, sorted_edges[0][1])  
+
+  return n_pruned
+
+# ----------------------------------------------------------------------------
+# helpers for analyzing the graph
+
+def inspect_new_edges(g):
   for e in g.edges:
     v1, v2 = e.v1, e.v2
 
@@ -252,66 +298,3 @@ def examine_scaffold_ambiguities(g):
       print 'w2 wells:', ','.join([str(w) for w in w2_wells])
       print e1.support, e2.support, abs_support_delta, rel_support_delta, w1_connectivity
       print
-
-# ----------------------------------------------------------------------------
-# helpers
-
-def _select_edge(g, E, e_selected):
-  to_remove = [e for e in E]
-  for e in to_remove:
-    if e != e_selected:
-      assert e.v1 != e.v2
-      g.remove_edge(e)
-
-def _get_wells_between_v(v1, v2, conn1, conn2):
-  if conn1 == 'H':
-    v1_wells = v1.head_wells
-  elif conn1 == 'T':
-    v1_wells = v1.tail_wells
-  if conn2 == 'H':
-    v2_wells = v2.head_wells
-  elif conn2 == 'T':
-    v2_wells = v2.tail_wells
-
-  return v1_wells & v2_wells, v1_wells, v2_wells
-
-def _get_common_wells(e):
-  v1, v2 = e.v1, e.v2
-
-  if e.connection[v1] == 'H':
-    v1_wells = v1.head_wells
-  elif e.connection[v1] == 'T':
-    v1_wells = v1.tail_wells
-  if e.connection[v2] == 'H':
-    v2_wells = v2.head_wells
-  elif e.connection[v2] == 'T':
-    v2_wells = v2.tail_wells
-
-  return v1_wells & v2_wells
-
-def _frac_common(e):
-  v1, v2 = e.v1, e.v2
-  conn1, conn2, = e.connection[v1], e.connection[v2]
-  common_wells, v1_wells, v2_wells = _get_wells_between_v(v1, v2, conn1, conn2)  
-  all_wells = v1_wells | v2_wells
-  return float(len(common_wells)) / float(len(all_wells))
-
-def _resolve_repeats_via_wells(g):
-  sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
-  n_pruned = 0
-  for v in sorted_v:
-    # look at the head side
-    if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
-      sorted_edges = sorted([(_frac_common(e),e) for e in v.head_edges], reverse=True)
-      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
-        n_pruned += len(v.head_edges) - 1
-        _select_edge(g, v.head_edges, sorted_edges[0][1])  
-
-    # look at the tail side
-    if len(v.tail_edges) >= 2 and all(e.is_scaffold_edge for e in v.tail_edges):
-      sorted_edges = sorted([(_frac_common(e),e) for e in v.tail_edges], reverse=True)
-      if sorted_edges[0][0] - sorted_edges[1][0] > 0.1:
-        n_pruned += len(v.tail_edges) - 1
-        _select_edge(g, v.tail_edges, sorted_edges[0][1])  
-
-  return n_pruned

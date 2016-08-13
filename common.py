@@ -13,7 +13,6 @@ def n50(l):
   while length < half_length:
     x = l.pop()
     length += x
-    # print "%d/%d" % (length, total_length)
 
   return x
 
@@ -30,7 +29,6 @@ def nx(L,x):
   while length < x_length:
     t = l.pop()
     length += t
-    # print "%d/%d" % (length, total_length)
 
   return t
 
@@ -74,7 +72,6 @@ def weighted_choice(choices):
     if upto + w >= r:
       return c
     upto += w
-  print choices
   assert False, "Shouldn't get here"
 
 def reverse_string(s):

@@ -1,3 +1,13 @@
+"""Graph manipulation algorithms
+
+Currently, this module contains an alternative way to prune the scaffold graph
+using Maximum Spanning Trees, in a way that is similar to the FragScaff 
+algorithm.
+
+Our main approach seems to currently work better, so we currently don't use 
+this code.
+"""
+
 import itertools
 import networkx as nx
 
@@ -90,16 +100,6 @@ def scaffold_via_wells_mst(g):
         n_removed += 1
 
     if n_iter >= 4: keyboard()
-
-    # # remove edges not in trunk:
-    # E = [e for e in g.edges]
-    # trunk = set(trunk)
-    # n_removed = 0
-    # for e in E:
-    #   e_nx = ( (e.v1.id, e.connection[e.v1]), (e.v2.id, e.connection[e.v2]) )
-    #   if not e_nx in trunk:
-    #     g.remove_edge(e)
-    #     n_removed += 1
 
     print '%d edges not in trunk removed.' % n_removed
 
