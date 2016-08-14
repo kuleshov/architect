@@ -1,10 +1,8 @@
-import intervals
 import logging
 
-from visualize import print_vertex, print_connection
-
-from common import reverse_complement
-from string_graph import AssemblyVertex, no_diedge
+from common.visualize import print_vertex, print_connection
+from common.util import reverse_complement
+from graph.string_graph import AssemblyVertex, no_diedge
 
 DEBUG = False
 

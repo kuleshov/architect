@@ -3,7 +3,7 @@ import sys
 from bisect import bisect_left, bisect_right
 from graph import Vertex, Edge, Graph
 
-from common import *
+from common.util import *
 
 class AssemblyGraph(Graph):
 	"""Graph structure storing genome assembly."""

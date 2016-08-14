@@ -1,10 +1,9 @@
 import networkx as nx
 
-import intervals
-from string_graph import ScaffoldEdge
+from graph.string_graph import ScaffoldEdge
 from contraction import contract_edges
 
-from visualize import print_vertex
+from common.visualize import print_vertex
 
 # ----------------------------------------------------------------------------
 # classical scaffolding

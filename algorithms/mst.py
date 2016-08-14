@@ -11,8 +11,8 @@ this code.
 import itertools
 import networkx as nx
 
-from scaffolder import make_wellscaff_edges #, contract_edges
-from contraction import contract_edges
+from algorithms.scaffolder import make_wellscaff_edges
+from algorithms.contraction import contract_edges
 
 # ----------------------------------------------------------------------------
 

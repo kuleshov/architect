@@ -6,7 +6,7 @@ import intervals
 from string_graph import AssemblyVertex, OverlapEdge, ScaffoldEdge, \
                          AssemblyGraph, no_diedge
 
-from common import reverse_complement
+from common.util import reverse_complement
 
 # ----------------------------------------------------------------------------
 # constants

@@ -5,35 +5,33 @@ import logging
 import pickle
 
 # save/load graphs
-from graph_load import load_from_fasta_tsv, \
+from graph.load import load_from_fasta_tsv, \
                        save_fasta, save_layout, save_bandage_gfa, \
                        save_to_fasta_tsv, \
                        unpickle_graph, pickle_graph
 
 # save file in dot format
-import visualize
-from visualize import to_graphviz_dot, to_graphviz_dot_with_intervals, \
-                      to_graphviz_dot_with_double_intervals, \
-                      to_graphviz_dot_with_connections, \
-                      to_graphviz_dot_with_markup
+from common import visualize
+from common.visualize import to_graphviz_dot, to_graphviz_dot_with_intervals,\
+                             to_graphviz_dot_with_double_intervals, \
+                             to_graphviz_dot_with_connections, \
+                             to_graphviz_dot_with_markup
 
 # visualize parts of assembly graph
-from visualize import print_connection, print_repeat
+from common.visualize import print_connection, print_repeat
 
 # collect statistics about the graph
-from graph_stats import print_stats
+from graph.stats import print_stats
 
 # contract edges that are similar
-from contraction import contract_edges, remove_loops, remove_parallel_edges
-
-# method to verify graph correctness
-from verificator import examine_repeats, examine_connections
+from algorithms.contraction import contract_edges, remove_loops, \
+                                   remove_parallel_edges
 
 # scaffolding subroutines
-from scaffolder import prune_scaffold_edges, cut_tips, \
-                       prune_scaffold_edges_via_wells, \
-                       prune_via_wells, \
-                       make_wellscaff_edges
+from algorithms.scaffolder import prune_scaffold_edges, cut_tips, \
+                                  prune_scaffold_edges_via_wells, \
+                                  prune_via_wells, \
+                                  make_wellscaff_edges
 
 # ----------------------------------------------------------------------------
 

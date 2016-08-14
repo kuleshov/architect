@@ -6,9 +6,9 @@ These may be helpful to debug or examine assemblies.
 import os
 import sys
 
-import intervals
-from intervals import get_head_intervals, get_tail_intervals
-from common import reverse_complement
+import graph.intervals as intervals
+from graph.intervals import get_head_intervals, get_tail_intervals
+from common.util import reverse_complement
 
 # ----------------------------------------------------------------------------
 # print vertex, edge information
