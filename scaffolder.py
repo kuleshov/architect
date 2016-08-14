@@ -38,6 +38,7 @@ def prune_scaffold_edges(g):
 def prune_scaffold_edges_via_wells(g):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
   n_pruned = 0
+
   for v in sorted_v:
     # look at the head side
     if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
@@ -95,12 +96,12 @@ def prune_via_wells(g, min_common=4, min_thr=0.33):
 
   return n_pruned
 
-def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
+def make_wellscaff_edges(g, min_common=4, min_thr=0.33, min_len=5000):
   n_edges = 0
   for v1 in g.vertices:
-    if len(v1) < 5000: continue
+    if len(v1) < min_len: continue
     for v2 in g.vertices:
-      if len(v2) < 5000: continue
+      if len(v2) < min_len: continue
       if v1.id >= v2.id: continue
       # uncomment this to only connect "true edges"
       # if not intervals.overlap(v1.intervals, v2.intervals): continue
@@ -128,7 +129,7 @@ def make_wellscaff_edges(g, min_common=4, min_thr=0.33):
               elif e.connection[v] == 'T':
                 v.tail_edges.add(e)
               else:
-                exit('ERROR: Invalid edge connection!')
+                raise Exception('ERROR: Invalid edge connection!')
             g.add_edge(e)
             n_edges += 1
 

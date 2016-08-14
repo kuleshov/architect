@@ -111,7 +111,6 @@ def view(args):
 def scaffold(args):
   logging.info('Creating the scaffold graph')
   g = load_from_fasta_tsv(args.fasta, args.edges, args.containment)
-  logging.info('Statistics of the loaded graph:')
   print_stats(g)
 
   # delete small vertices
@@ -130,7 +129,6 @@ def scaffold(args):
     logging.info('Simplifying the graph using paired-end reads')
     logging.info('Contracting unambigous paths')
     contract_edges(g, store_layout=True)
-    logging.info('Statistics after contraction:')
     print_stats(g)
     save_fasta(g, 'contracted.fasta')
     
@@ -146,7 +144,6 @@ def scaffold(args):
 
     logging.info('Contracting unambigous paths')
     n_contracted = contract_edges(g)
-    logging.info('Statistics after contraction:')
     print_stats(g)
 
   # delete all existing edges from the graph
@@ -159,9 +156,9 @@ def scaffold(args):
   n_edges = make_wellscaff_edges(g, min_common=3, min_thr=0.2)
   logging.info('%d scaffold edges from read clouds' % n_edges)
 
-  # save_to_fasta_tsv(g, 'wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment')
-  # g = load_from_fasta_tsv('wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment',
-  #                         min_supp=1)
+  save_to_fasta_tsv(g, 'wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment')
+  g = load_from_fasta_tsv('wellscaff.fasta', 'wellscaff.tsv', 'wellscaff.containment',
+                          min_supp=1)
 
   logging.info('Pruning edges with low support')
   n_pruned = prune_via_wells(g, min_common=3, min_thr=0.2)
@@ -169,7 +166,6 @@ def scaffold(args):
 
   logging.info('Contracting unambigous paths')
   n_contracted = contract_edges(g, store_layout=True)
-  logging.info('Statistics after contraction:')
   print_stats(g)
 
   logging.info('Saving scaffolding results')

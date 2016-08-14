@@ -2,12 +2,13 @@ import sys
 import logging
 
 def print_stats(g):
-  stats_str = "Graph stats: %d vertices, %d edges, %d connected components, " \
-              "%d N50, %d max achievable N50, %d total contig length" \
-              % (len(g.vertices), len(g.edges), g.count_connected_components(),
-                 _graph_n50(g), g.idealized_n50(), _graph_tot(g))
-
-  logging.info(stats_str)
+  stats_str1 = "Graph stats: %d vertices, %d edges, %d connected components" \
+              % (len(g.vertices), len(g.edges), g.count_connected_components())
+  stats_str2 = "Graph stats: N50: %d; Max achievable N50: %d; Total length: %d" \
+              % (_graph_n50(g), g.idealized_n50(), _graph_tot(g))
+           
+  logging.info(stats_str1)
+  logging.info(stats_str2)
 
   # stats.write("Vertices: %d\n" % len(g.vertices))
   # stats.write("Edges: %d\n" % len(g.edges))

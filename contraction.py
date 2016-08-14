@@ -181,6 +181,8 @@ def contract_scaffold_edge(g, e, candidate_edges):
   g.remove_vertex_from_index(v1)
   g.remove_vertex_from_index(v2)
 
+  assert len(new_v.seq) >= len(new_v)
+
   if DEBUG:
     for f in good_E:
       if f not in new_v.edges:

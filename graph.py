@@ -105,6 +105,12 @@ class Vertex(object):
   def id(self):
     return self._my_id
 
+  def __len__(self):
+    if not self.metadata['contigs']:
+      return len(self.seq)  
+    else:
+      return sum([clen for cid, civl, clen, cori in self.metadata['contigs']])
+
   #TODO: remove this after refactoring code that used metadata directly
   @property
   def metadata(self):

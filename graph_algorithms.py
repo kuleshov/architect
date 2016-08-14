@@ -1,4 +1,4 @@
-"""Graph manipulation algorithms
+"""Scaffolding via MSTs
 
 Currently, this module contains an alternative way to prune the scaffold graph
 using Maximum Spanning Trees, in a way that is similar to the FragScaff 

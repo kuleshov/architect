@@ -23,7 +23,6 @@ def n50(l):
   while length < half_length:
     x = l.pop()
     length += x
-    # print "%d/%d" % (length, total_length)
 
   return x
 
@@ -149,6 +148,8 @@ bp_correct = 0
 profiles = list()
 n_total = 0
 errors = 0
+seen = set()
+
 with open(args.layout) as f:
   for line in f:
     n_total += 1
@@ -170,6 +171,8 @@ with open(args.layout) as f:
       cluster_len += clen
 
       all_ids.append(cid)
+      assert cid not in seen
+      seen.add(cid)
       all_lengths.append(clen)
 
       if istr:
