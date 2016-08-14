@@ -21,7 +21,7 @@ TSV_TYPE_SCA = 'S'
 CTMT_WELL_REC = 'W'
 CTMT_IVL_REC = 'R'
 
-DEBUG = True
+DEBUG = False
 
 # ----------------------------------------------------------------------------
 # main functions
@@ -51,8 +51,8 @@ def save_fasta(g, fasta_file):
       fasta.write('>' + str(v.id) + '\n')
       fasta.write(v.seq + '\n')
 
-def save_layout(g, layout_file):
-  with open(layout_file, 'w') as out:
+def save_ordering(g, ordering_file):
+  with open(ordering_file, 'w') as out:
     for v in g.vertices:
       out.write('%d\t' % v.id)
       if v.contigs:
@@ -161,13 +161,11 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None, min_supp=3):
           continue
 
         j = g.edge_id_generator.get_id()
-        # FIXME: user proper distance
-        e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, 25)
-        # e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, int(d))
+        e = ScaffoldEdge(j, v1, v2, conn1, conn2, ori, max(int(d),0))
         e.support = int(spt)
 
       elif type_ == TSV_TYPE_OVL:
-        #FIXME: need to implement this
+        #TODO: need to implement this
         raise ValueError('Parsing of overlap edges in TSV not implemented')
 
       else:
@@ -181,7 +179,7 @@ def _load_edges_from_tsv(g, tsv_path, vertices_by_contig=None, min_supp=3):
         elif e.connection[v] == 'T':
           v.tail_edges.add(e)
         else:
-          exit('ERROR: Invalid edge connection!')
+          raise Exception('ERROR: Invalid edge connection!')
 
   logging.info('Edge connections loaded')
 

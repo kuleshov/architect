@@ -210,7 +210,7 @@ class OverlapEdge(AssemblyEdge):
 		elif v1_ovl_start == 0:
 			connection = 'RL'
 		else:
-			exit()
+			raise Exception('Invalid connection')
 
 		if connection == 'LR':
 			super(OverlapEdge, self).__init__(id_, v1, v2, orientation)
@@ -231,7 +231,7 @@ class OverlapEdge(AssemblyEdge):
 			elif self.ovl_end[v] == length[v]-1:
 				self.connection[v] = 'T'
 			else:
-				exit("ERROR: Reads don't overlap at endpoints")
+				raise Exception("ERROR: Reads don't overlap at endpoints")
 
 	def shift(self, v, ovl_shift):
 		self.ovl_start[v] += ovl_shift
@@ -372,9 +372,9 @@ def no_diedge(v):
 		n1, n2 = e.v1, e.v2
 
 		if n1 != v and n1 in N:
-			exit("ERROR: Diedge found")
+			raise Exception("ERROR: Diedge found")
 		if n2 != v and n2 in N:
-			exit("ERROR: Diedge found")
+			raise Exception("ERROR: Diedge found")
 
 		N.add(n1)
 		N.add(n2)

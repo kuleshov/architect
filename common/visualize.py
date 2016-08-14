@@ -16,17 +16,17 @@ from common.util import reverse_complement
 def print_vertex(v):
 	print 'Vertex: %d' % v.id
 	print 'True intervals:', v.intervals
-	print 'wells:', ', '.join(['%d:%d-%d' % (w, v.well_interval(w)[0], v.well_interval(w)[1]) for w in v.wells])
+	print 'Wells:', ', '.join(['%d:%d-%d' % (w, v.well_interval(w)[0], v.well_interval(w)[1]) for w in v.wells])
 	T_wells = set(v.tail_wells)
 	H_wells = set(v.head_wells)
-	print 'H:'
+	print 'Head edges:'
 	for e in v.head_edges:
 		w = e.other_vertex(v)
 		w_wells = w.head_wells if e.connection[w] == 'H' else w.tail_wells
 		wells = ', '.join(sorted(['%d:%d-%d' % (well, v.well_interval(well)[0], v.well_interval(well)[1]) 
 														for well in w_wells if well in H_wells]))
 		print e.id, len(w_wells), wells
-	print 'T:'
+	print 'Tail edges:'
 	for e in v.tail_edges:
 		w = e.other_vertex(v)
 		w_wells = w.head_wells if e.connection[w] == 'H' else w.tail_wells
@@ -108,23 +108,6 @@ def visualize_well_correctness(g):
 						print v2.id, len(v2), v2.intervals
 						print v2_wells
 						print common_wells
-						# print_vertex(v1)
-						# print_vertex(v2)
-
-def visualize_assembly(v, I, genome):
-	print v.seq
-	for i, ctg in enumerate(v.metadata['contigs']):
-		print ctg, v.metadata['contig_starts'][ctg], v.metadata['contig_ends'][ctg]
-		print genome[I[i][0]][I[i][1]:I[i][2]+1]
-
-def visualize_connection(e):
-	v1, v2 = e.v1, e.v2
-	print e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation
-	print v1.seq
-	print v2.seq
-	print v1.seq[e.ovl_start[v1]:e.ovl_end[v1]+1]
-	print v2.seq[e.ovl_start[v2]:e.ovl_end[v2]+1]
-
 
 def _get_wells_between_v(v1, v2, conn1, conn2):
   if conn1 == 'H':
@@ -141,6 +124,18 @@ def _get_wells_between_v(v1, v2, conn1, conn2):
 # ----------------------------------------------------------------------------
 # create dot files
 
+def to_graphviz_dot(g, dot_file):
+	with open(dot_file, 'w') as dot:
+		dot.write('digraph adj {\n')
+		for v in g.vertices:
+			dot.write('%d [label = "%d"]\n' % (v.id, len(v.seq)))
+		for e in g.edges:
+			v1, v2 = e.v1, e.v2
+			dot.write('"%d" -> "%d" [label= "%s%s %d"]\n' \
+				% (v1.id, v2.id, e.connection[v1], e.connection[v2], e.orientation))
+
+		dot.write('}\n')
+
 def to_abyss_explorer_dot(g, dot_file):
 	with open(dot_file, 'w') as dot:
 		dot.write('digraph adj {\n')
@@ -156,135 +151,6 @@ def to_abyss_explorer_dot(g, dot_file):
 			elif ori == 1:
 				dot.write('"%d+" -> "%d-"\n' % (v1.id, v2.id))
 			else:
-				exit("ERROR: Invalid orientation")
-
-		dot.write('}\n')
-
-def to_graphviz_dot(g, dot_file):
-	with open(dot_file, 'w') as dot:
-		dot.write('digraph adj {\n')
-		for v in g.vertices:
-			dot.write('%d [label = "%d"]\n' % (v.id, len(v.seq)))
-		for e in g.edges:
-			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
-
-		dot.write('}\n')
-
-def to_graphviz_dot_with_intervals(g, dot_file=sys.stdout):
-	# genome = load_genome()
-	with open(dot_file, 'w') as dot:
-		dot.write('digraph adj {\n')
-		for v in g.vertices:
-			I = get_true_intervals(v, v.metadata['contigs'])
-			color = "black"
-			if len(I) > 1:
-				color = "red"
-			if v.id == 3764187:
-				color = "green"
-
-			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id, v.id, len(v), ','.join([str(i) for i in I]), color))
-		for e in g.edges:
-			v1, v2 = e.v1, e.v2
-			# if v1.id == 3706567 and v2.id == 3712515:
-			# 	visualize_connection(e)
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
-
-		dot.write('}\n')
-
-def to_graphviz_dot_with_connections(g, resolver, dot_file=sys.stdout):
-	# figure out which color to use for which edge
-	COLORS = ['red', 'blue', 'green', 'cyan', 'yellow', 'magenta', 'purple', 'pink', 'chocolate']
-	color_map = dict()
-	for v in g.vertices:
-		i = 0
-		pairs_to_resolve = resolver(v, g)
-		print v.id, len(pairs_to_resolve)
-		for e_h, e_t in pairs_to_resolve:
-			if v.id == 3754668:
-				print e_h.id, e_t.id
-			if e_h not in color_map:
-				color_map[e_h] = list()
-			if e_t not in color_map:
-				color_map[e_t] = list()
-
-			color_map[e_h].append(COLORS[i])
-			color_map[e_t].append(COLORS[i])
-			i += 1
-
-	# print the graph
-	with open(dot_file, 'w') as dot:
-		dot.write('digraph adj {\n')
-		for v in g.vertices:
-			I = get_true_intervals(v, v.metadata['contigs'])
-			if len(I) > 1:
-				color = "red"
-			else:
-				color = "black"
-
-			dot.write('%d [label = "%d:%s", color="%s"]\n' % (v.id, v.id, ','.join([str(i) for i in I]), color))
-		for e in g.edges:
-			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, ':'.join(color_map.get(e, ['black'])), e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
-
-		dot.write('}\n')
-
-def to_graphviz_dot_with_markup(g, V_sets, E_sets, dot_file=sys.stdout):
-	COLORS = ['blue', 'green', 'cyan', 'yellow', 'magenta', 'purple', 'pink', 'chocolate']
-	v_color_map = dict()
-	for i, V in enumerate(V_sets):
-		for v in V:
-			v_color_map[v] = COLORS[i]
-
-	e_color_map = dict()
-	for i, E in enumerate(E_sets):
-		for e in E:
-			e_color_map[e] = COLORS[i]
-
-	# print the graph
-	with open(dot_file, 'w') as dot:
-		dot.write('digraph adj {\n')
-		for v in g.vertices:
-			I = get_true_intervals(v, v.metadata['contigs'])
-			if len(I) > 1:
-				color = "red"
-			else:
-				color = "black"
-
-			dot.write('%d [label = "%d:%d:%s", color="%s"]\n' % (v.id, v.id, len(v), ','.join([str(i) for i in I]), v_color_map.get(v,color)))
-		for e in g.edges:
-			v1, v2 = e.v1, e.v2
-			dot.write('"%d" -> "%d" [color="%s" label= "%d %d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e_color_map.get(e, 'black'), e.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
-
-		dot.write('}\n')
-
-def to_graphviz_dot_with_double_intervals(g, dot_file):
-	with open(dot_file, 'w') as dot:
-		dot.write('digraph adj {\n')
-		for v in g.vertices:
-			I_head = get_head_intervals(v, v.metadata['contig_starts'].keys())
-			I_tail = get_tail_intervals(v, v.metadata['contig_ends'].keys())
-			if len(I_head) > 1 or len(I_tail) > 1:
-				color = "red"
-			else:
-				color = "black"
-
-			if I_head: 
-				head_label = ','.join([str(i) for i in I_head])
-			else:
-				head_label = ''
-
-			if I_tail: 
-				tail_label = ','.join([str(i) for i in I_tail])
-			else:
-				tail_label = ''
-
-			label = head_label + '\n' + tail_label + '\n' + str(len(v))
-			dot.write('%d [label = "%s", color="%s"]\n' % (v.id, label, color))
-		for e in g.edges:
-			v1, v2 = e.v1, e.v2
-			# if v1.id == 3706567 and v2.id == 3712515:
-			# 	visualize_connection(e)
-			dot.write('"%d" -> "%d" [label= "%d %d %d %d %s%s %d"]\n' % (v1.id, v2.id, e.ovl_start[v1], e.ovl_end[v1], e.ovl_start[v2], e.ovl_end[v2], e.connection[v1], e.connection[v2], e.v2_orientation))
+				raise Exception("ERROR: Invalid orientation")
 
 		dot.write('}\n')

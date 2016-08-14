@@ -69,7 +69,7 @@ def scaffold_via_wells_mst(g):
     print '%d edges not in MST removed.' % n_removed
     
     # contract edges
-    n_contracted = contract_edges(g, store_layout=True)
+    n_contracted = contract_edges(g, store_ordering=True)
     print '%d edges contracted.' % n_contracted
 
     # now we are going to compute the trunk
@@ -104,7 +104,7 @@ def scaffold_via_wells_mst(g):
     print '%d edges not in trunk removed.' % n_removed
 
     # contract one last time
-    n_contracted = contract_edges(g, store_layout=True)
+    n_contracted = contract_edges(g, store_ordering=True)
     print '%d edges contracted.' % n_contracted
 
     # construct well-based scaffold graph in networkx format

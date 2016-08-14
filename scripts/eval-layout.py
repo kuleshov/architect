@@ -7,7 +7,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-l', '--layout', required=True)
+parser.add_argument('-o', '--ordering', required=True)
 
 args = parser.parse_args()
 
@@ -150,7 +150,7 @@ n_total = 0
 errors = 0
 seen = set()
 
-with open(args.layout) as f:
+with open(args.ordering) as f:
   for line in f:
     n_total += 1
     fields = line.strip().split()

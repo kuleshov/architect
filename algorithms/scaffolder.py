@@ -1,4 +1,4 @@
-import networkx as nx
+import logging
 
 from graph.string_graph import ScaffoldEdge
 from contraction import contract_edges
@@ -8,7 +8,7 @@ from common.visualize import print_vertex
 # ----------------------------------------------------------------------------
 # classical scaffolding
 
-def prune_scaffold_edges(g):
+def prune_scaffold_edges(g, abs_support_thr=3, rel_support_thr=0.7):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
   n_pruned = 0
   for v in sorted_v:
@@ -18,7 +18,9 @@ def prune_scaffold_edges(g):
       e1, e2 = sorted_e[0], sorted_e[1]
       abs_support_delta = e1.support - e2.support
       rel_support_delta = float(e2.support) / float(e1.support)
-      if (abs_support_delta >= 3) and rel_support_delta < 0.7:
+      
+      if (abs_support_delta >= abs_support_thr) \
+      and rel_support_delta < rel_support_thr:
         n_pruned += len(v.head_edges) - 1
         _select_edge(g, v.head_edges, e1)
 
@@ -28,27 +30,29 @@ def prune_scaffold_edges(g):
       e1, e2 = sorted_e[0], sorted_e[1]
       abs_support_delta = e1.support - e2.support
       rel_support_delta = float(e2.support) / float(e1.support)
-      if (abs_support_delta >= 3) and rel_support_delta < 0.7:
+      
+      if (abs_support_delta >= abs_support_thr) \
+      and rel_support_delta < rel_support_thr:
         n_pruned += len(v.tail_edges) - 1
         _select_edge(g, v.tail_edges, e1)
 
   return n_pruned
 
-def prune_scaffold_edges_via_wells(g):
+def prune_scaffold_edges_via_wells(g, thr=0.5):
   sorted_v = sorted(g.vertices, key=lambda x: len(x.seq), reverse=True)
   n_pruned = 0
 
   for v in sorted_v:
     # look at the head side
     if len(v.head_edges) >= 2 and all(e.is_scaffold_edge for e in v.head_edges):
-      supported_edges = [e for e in v.head_edges if len(_get_common_wells(e)) >= 4]
+      supported_edges = [e for e in v.head_edges if _get_common_frac(e, v) >= thr]
       if len(supported_edges) == 1:
         n_pruned += len(v.head_edges) - 1
         _select_edge(g, v.head_edges, supported_edges[0])  
 
     # look at the tail side
     if len(v.tail_edges) >= 2 and all(e.is_scaffold_edge for e in v.tail_edges):
-      supported_edges = [e for e in v.tail_edges if len(_get_common_wells(e)) >= 4]
+      supported_edges = [e for e in v.tail_edges if _get_common_frac(e, v) >= thr]
       if len(supported_edges) == 1:
         n_pruned += len(v.tail_edges) - 1
         _select_edge(g, v.tail_edges, supported_edges[0])
@@ -96,12 +100,19 @@ def prune_via_wells(g, min_common=4, min_thr=0.33):
   return n_pruned
 
 def make_wellscaff_edges(g, min_common=4, min_thr=0.33, min_len=5000):
-  n_edges = 0
+  n_edges, n_seen = 0, 0
+  n_large_vertices = len([v for v in g.vertices if len(v) >= min_len])
+  n_pairs = n_large_vertices*(n_large_vertices+1)/2.
+
   for v1 in g.vertices:
     if len(v1) < min_len: continue
     for v2 in g.vertices:
       if len(v2) < min_len: continue
       if v1.id >= v2.id: continue
+
+      if n_seen % 20000 == 0:
+        logging.info('%d/%d vertex pairs (%d edges created)' % (n_seen, n_pairs, n_edges))
+      n_seen += 1
       # uncomment this to only connect "true edges"
       # if not intervals.overlap(v1.intervals, v2.intervals): continue
       for conn1 in ('H', 'T'):
@@ -169,6 +180,27 @@ def _get_common_wells(e):
     v2_wells = v2.tail_wells
 
   return v1_wells & v2_wells
+
+def _get_common_frac(e, v1):
+  v2 = e.other_vertex(v1)
+
+  if e.connection[v1] == 'H':
+    v1_wells = v1.head_wells
+  elif e.connection[v1] == 'T':
+    v1_wells = v1.tail_wells
+  if e.connection[v2] == 'H':
+    v2_wells = v2.head_wells
+  elif e.connection[v2] == 'T':
+    v2_wells = v2.tail_wells
+
+  common_wells = v1_wells & v2_wells
+  all_wells = v1_wells | v2_wells
+  if all_wells:
+    frac_common = float(len(common_wells)) / float(len(all_wells))
+  else:
+    frac_common = 0.0
+
+  return frac_common
 
 def _frac_common(e):
   v1, v2 = e.v1, e.v2

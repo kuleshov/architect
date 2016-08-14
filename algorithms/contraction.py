@@ -8,7 +8,7 @@ DEBUG = False
 
 # ----------------------------------------------------------------------------
 
-def contract_edges(g, E=None, store_layout=False):
+def contract_edges(g, E=None, store_ordering=False):
   if DEBUG:
     for w in g.vertices:
       for f in w.edges:
@@ -33,10 +33,10 @@ def contract_edges(g, E=None, store_layout=False):
   n_contracted, n_seen, n_tot = 0, 0, len(g.edges)
   while candidate_edges:
     if n_seen % 5000 == 0:
-      logging.info('%d/%d (%d contracted)' % (n_seen, n_tot, n_contracted))
+      logging.info('%d/%d edges (%d contracted)' % (n_seen, n_tot, n_contracted))
     e = candidate_edges.pop()
     if can_be_contracted(e, g): 
-      contract_edge(g, e, candidate_edges, store_layout)
+      contract_edge(g, e, candidate_edges, store_ordering)
       n_contracted += 1
     n_seen += 1
 
@@ -94,12 +94,12 @@ def can_be_contracted(e, g):
 
   return False
 
-def contract_edge(g, e, E, store_layout=False):
+def contract_edge(g, e, E, store_ordering=False):
   if e.is_overlap_edge:
     contract_overlap_edge(g,e,E)
   elif e.is_scaffold_edge:
     v_new = contract_scaffold_edge(g,e,E)
-    if store_layout:
+    if store_ordering:
       v_new.set_contigs_from_vertices(e.v1, e.v2)
   else:
     raise ValueError('Invalid edge type found')
@@ -137,7 +137,6 @@ def contract_scaffold_edge(g, e, candidate_edges):
   new_id = g.vertex_id_generator.get_id()
 
   # construct new sequence
-  # FIXME: handle properly the case of negative distance
   distance = max(0, e.distance)
   padding = 'N' * 10
 
@@ -146,7 +145,7 @@ def contract_scaffold_edge(g, e, candidate_edges):
   elif orientation == 1:
     new_seq = v1.seq + padding + reverse_complement(v2.seq)
   else:
-    exit("ERROR: Incorrect orientation!")
+    raise Exception("ERROR: Incorrect orientation!")
 
   new_v = AssemblyVertex(new_id, new_seq)
   new_v.head_edges = v1.head_edges
