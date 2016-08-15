@@ -13,27 +13,28 @@ parser.add_argument('-b', '--bam', required=True)
 parser.add_argument('-c', '--containment', required=True)
 parser.add_argument('-t', '--threshold', type=int, default=75)
 parser.add_argument('-s', '--shift', type=int, default=0)
-# parser.add_argument('-m', '--map', required=True)
+parser.add_argument('-m', '--map', required=False)
 
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------
 # load map
 
-# print 'Loading well map...'
-#
-# well_map = dict()
-# n = 0
-# with open(args.map) as mapfile:
-# 	mapfile.readline()
-# 	for line in mapfile:
-# 		_, r, w = line.split()
-# 		well_map[r] = int(w)
-# 		n += 1
-# 		if n % 1000000 == 0:
-# 			print n
-#
-# print 'Well map loaded.'			
+if args.map:
+  print 'Loading well map...'
+
+  well_map = dict()
+  n = 0
+  with open(args.map) as mapfile:
+  	mapfile.readline()
+  	for line in mapfile:
+  		_, r, w = line.split()
+  		well_map[r] = int(w)
+  		n += 1
+  		if n % 1000000 == 0:
+  			print n
+
+  print 'Well map loaded.'			
 
 # -----------------------------------------------------------------------------
 # bam -> containment
@@ -63,10 +64,13 @@ for read in samfile:
     continue
 
   name = read.qname
-  well = int(name.split('_')[0][4:]) + args.shift
-  # t = ':'.join(name.split(':')[3:])
-  # if t not in well_map: continue
-  # well = well_map[t]
+  if args.map:
+    t = ':'.join(name.split(':')[3:])
+    if t not in well_map: continue
+    well = well_map[t]
+  else:
+    well = int(name.split('_')[0][4:]) + args.shift
+    
   contig = samfile.getrname(read.tid)
   start, end = min(read.positions), max(read.positions)
 
