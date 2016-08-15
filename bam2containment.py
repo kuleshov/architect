@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-b', '--bam', required=True)
 parser.add_argument('-c', '--containment', required=True)
-parser.add_argument('-t', '--threshold', type=int, default=75)
+parser.add_argument('-t', '--threshold', type=int, default=20)
 parser.add_argument('-s', '--shift', type=int, default=0)
 parser.add_argument('-m', '--map', required=False)
 
