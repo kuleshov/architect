@@ -8,6 +8,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-o', '--ordering', required=True)
+parser.add_argument('-v', '--verbose', action='store_true', default=False)
 
 args = parser.parse_args()
 
@@ -77,7 +78,7 @@ def eval_ivls(ivls):
 
   n_correct = n_correct1 + n_correct2 - ilen(max_i)
   n_wrong = n_wrong1 + n_wrong2
-  print profile1, profile2
+  if args.verbose: print profile1, profile2
   profile = profile2 + profile1[1:]
 
   return n_correct, n_wrong, profile
@@ -101,10 +102,10 @@ def eval_ivl_seq(ivls, dir):
   n_correct, n_wrong = 0, 0
   profile = []
   if dir == 'fwd':
-    print 'F',
+    if args.verbose: print 'F',
     last_correct_ivl = ivls[0]
     for i, ivl in enumerate(ivls):
-      print ivl,
+      if args.verbose: print ivl,
       if i == 0:
         n_correct += ilen(ivl)
         last_correct_ivl = ivl
@@ -114,16 +115,16 @@ def eval_ivl_seq(ivls, dir):
         last_correct_ivl = ivl
         n_correct += ilen(ivl)
         profile.append('K')
-        print 'K',
+        if args.verbose: print 'K',
       else:
         n_wrong += ilen(ivl)
         profile.append('E')
-        print 'E',
-    print n_correct, n_wrong
+        if args.verbose: print 'E',
+    if args.verbose: print n_correct, n_wrong
   elif dir == 'bwd':
-    print 'B',
+    if args.verbose: print 'B',
     for i, ivl in enumerate(reversed(ivls)):
-      print ivl,
+      if args.verbose: print ivl,
       if i == 0:
         n_correct += ilen(ivl)
         last_correct_ivl = ivl
@@ -133,12 +134,12 @@ def eval_ivl_seq(ivls, dir):
         last_correct_ivl = ivl
         n_correct += ilen(ivl)
         profile = ['K'] + profile
-        print 'K',
+        if args.verbose: print 'K',
       else:
         n_wrong += ilen(ivl)
         profile = ['E'] + profile
-        print 'E',
-    print n_correct, n_wrong
+        if args.verbose: print 'E',
+    if args.verbose: print n_correct, n_wrong
 
   return n_correct, n_wrong, profile
 
@@ -183,11 +184,11 @@ with open(args.ordering) as f:
 
     n_correct, n_wrong = 0,0
     if cluster_ivls:
-      print cluster_ivls
+      if args.verbose: print cluster_ivls
       n_correct1, n_wrong1, profile1 = eval_ivls(cluster_ivls)
       n_correct2, n_wrong2, profile2 = eval_ivls(cluster_ivls[::-1])
-      print 'p1', profile1
-      print 'p2', profile2
+      if args.verbose: print 'p1', profile1
+      if args.verbose: print 'p2', profile2
       if n_correct1 > n_correct2:
         n_correct, n_wrong, profile = n_correct1, n_wrong1, profile1
       else:
@@ -199,9 +200,9 @@ with open(args.ordering) as f:
                      for cid, clen in zip(all_ids, all_lengths)]
       errors += len([1 for (x,y,z) in full_profile if z == 'E'])
       profiles.append(full_profile)
-      print cluster_len, n_correct, n_wrong
+      if args.verbose: print cluster_len, n_correct, n_wrong
 
-print bp_correct, bp_verifiable, bp_total
+if args.verbose: print bp_correct, bp_verifiable, bp_total
 
 # n50 calculations
 bp_total = 0
@@ -223,9 +224,8 @@ for profile in profiles:
   if curr_len:
     lengths.append(curr_len)
 
-print n_total, errors, bp_total, n50(uncorrected_lengths), n50(lengths)
-
-
-
-
+print 'Total bp:', n_total
+print 'Misorderings:', errors
+print 'Aligned bp:', errors
+print 'NA50:', n50(lengths)
 
