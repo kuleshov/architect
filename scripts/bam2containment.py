@@ -106,7 +106,7 @@ with open(args.containment, 'w') as c:
     for well, interval in interval_map.iteritems():
       if contig_well_suport_counts[contig][well] > args.threshold:
         start, end = interval[0][-1], interval[1][0]
-        c.write('W\t%s\t%d\t%d\t%d\n' % (contig, well, start, end))
+        c.write('W\t%s\t%s\t%d\t%d\n' % (contig, well, start, end))
 
 for contig, well_support_map in contig_well_suport_counts.iteritems():
   print contig

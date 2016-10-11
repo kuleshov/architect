@@ -200,7 +200,7 @@ def _load_containment(g, containment_file, vertices_by_contig=None):
         continue
       
       if fields[0] == CTMT_WELL_REC:
-        well, start, end = int(fields[2]), int(fields[3]), int(fields[4])
+        well, start, end = fields[2], int(fields[3]), int(fields[4])
         v.add_well(well, start, end)
 
       elif fields[0] == CTMT_IVL_REC:
@@ -235,7 +235,7 @@ def _write_containment(g, containment_file):
     for v in g.vertices:
       for w in v.wells:
         s, e = v.well_interval(w)
-        out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_WELL_REC, v.id, w, s, e))
+        out.write('%s\t%d\t%s\t%d\t%d\n' % (CTMT_WELL_REC, v.id, w, s, e))
       for ivl in v.intervals:
         out.write('%s\t%d\t%d\t%d\t%d\n' % (CTMT_IVL_REC, v.id, ivl[0], ivl[1], ivl[2]))
 
