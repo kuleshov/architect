@@ -179,10 +179,6 @@ def scaffold(args):
   save_to_fasta_tsv(g, '%s.wellscaff.fasta' % args.out, 
                        '%s.wellscaff.tsv' % args.out, 
                        '%s.wellscaff.containment' % args.out)
-  g = load_from_fasta_tsv('%s.wellscaff.fasta' % args.out, 
-                          '%s.wellscaff.tsv' % args.out, 
-                          '%s.wellscaff.containment' % args.out, 
-                           min_supp=1)
 
   logging.info('Pruning edges with low support')
   n_pruned = prune_via_wells(g, min_common=args.rc_abs_thr, 
